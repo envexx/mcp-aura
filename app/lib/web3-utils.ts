@@ -66,9 +66,25 @@ export class Web3Utils {
   private alphaRouter?: AlphaRouter;
 
   constructor(rpcUrl: string, chainId: number, network: keyof typeof NETWORKS) {
+    console.log('🔧 Initializing Web3Utils:', { rpcUrl, chainId, network });
+
+    // Initialize provider with just the RPC URL first
     this.provider = new JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
     this.network = network;
+
+    console.log('✅ Provider initialized');
+  }
+
+  private async ensureConnection() {
+    try {
+      const network = await this.provider.getNetwork();
+      console.log('🌐 Connected to network:', network);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to connect to network:', error);
+      return false;
+    }
   }
 
   // Helper to resolve token address from symbol or return address if already provided
@@ -92,35 +108,52 @@ export class Web3Utils {
 
   // Create Token instance with proper decimals
   private async createToken(tokenAddress: string): Promise<Token> {
+    console.log('🔨 Creating token for address:', tokenAddress);
+
     if (tokenAddress === AddressZero) {
-      // Native token (ETH)
+      // Native token (ETH) - use WETH address for routing
       const networkConfig = Object.values(NETWORKS).find(n => n.chainId === this.chainId);
       if (!networkConfig) {
         throw new Error(`Network config not found for chainId ${this.chainId}`);
       }
+      console.log('🌍 Using WETH for native token routing:', networkConfig.weth);
       return new Token(this.chainId, networkConfig.weth, 18, 'WETH', 'Wrapped Ether');
     }
 
-    // ERC20 token - fetch decimals
-    const tokenContract = new ethers.Contract(tokenAddress, [
-      'function decimals() view returns (uint8)',
-      'function symbol() view returns (string)',
-      'function name() view returns (string)'
-    ], this.provider);
+    try {
+      // ERC20 token - fetch decimals
+      console.log('📡 Fetching token info from contract...');
+      const tokenContract = new ethers.Contract(tokenAddress, [
+        'function decimals() view returns (uint8)',
+        'function symbol() view returns (string)',
+        'function name() view returns (string)'
+      ], this.provider);
 
-    const [decimals, symbol, name] = await Promise.all([
-      tokenContract.decimals(),
-      tokenContract.symbol().catch(() => 'UNKNOWN'),
-      tokenContract.name().catch(() => 'Unknown Token')
-    ]);
+      const [decimals, symbol, name] = await Promise.all([
+        tokenContract.decimals(),
+        tokenContract.symbol().catch(() => 'UNKNOWN'),
+        tokenContract.name().catch(() => 'Unknown Token')
+      ]);
 
-    return new Token(this.chainId, tokenAddress, decimals, symbol, name);
+      console.log('✅ Token info fetched:', { decimals, symbol, name });
+
+      return new Token(this.chainId, ethers.utils.getAddress(tokenAddress), decimals, symbol, name);
+    } catch (error) {
+      console.error('❌ Failed to fetch token info:', error);
+      // Fallback to basic token with 18 decimals
+      return new Token(this.chainId, ethers.utils.getAddress(tokenAddress), 18, 'UNKNOWN', 'Unknown Token');
+    }
   }
 
   // Get or create AlphaRouter instance
   private getAlphaRouter(): AlphaRouter {
     if (!this.alphaRouter) {
-      this.alphaRouter = new AlphaRouter({ chainId: this.chainId, provider: this.provider });
+      console.log('🎯 Creating AlphaRouter for chainId:', this.chainId);
+      this.alphaRouter = new AlphaRouter({
+        chainId: this.chainId,
+        provider: this.provider
+      });
+      console.log('✅ AlphaRouter created');
     }
     return this.alphaRouter;
   }
@@ -159,9 +192,19 @@ export class Web3Utils {
 
   async buildSwapTransaction(params: SwapParams): Promise<TransactionRequest> {
     try {
+      console.log('🔄 Building swap transaction:', params);
+
+      // Ensure connection first
+      const connected = await this.ensureConnection();
+      if (!connected) {
+        throw new Error('Failed to connect to blockchain network');
+      }
+
       // Resolve token addresses
       const tokenInAddress = this.resolveTokenAddress(params.tokenIn, this.network);
       const tokenOutAddress = this.resolveTokenAddress(params.tokenOut, this.network);
+
+      console.log('📍 Token addresses resolved:', { tokenInAddress, tokenOutAddress });
 
       // Create Token instances
       const [tokenIn, tokenOut] = await Promise.all([
@@ -169,13 +212,24 @@ export class Web3Utils {
         this.createToken(tokenOutAddress)
       ]);
 
+      console.log('🪙 Token instances created:', {
+        tokenIn: { address: tokenIn.address, symbol: tokenIn.symbol, decimals: tokenIn.decimals },
+        tokenOut: { address: tokenOut.address, symbol: tokenOut.symbol, decimals: tokenOut.decimals }
+      });
+
       // Determine if input is native token
       const networkConfig = NETWORKS[this.network];
       const isNativeIn = tokenInAddress.toLowerCase() === networkConfig.weth.toLowerCase();
 
+      console.log('🌐 Network config:', networkConfig);
+      console.log('💰 Is native input:', isNativeIn);
+
       // Create amount input
       const amountInWei = parseUnits(params.amountIn, tokenIn.decimals);
       const amountInCurrency = CurrencyAmount.fromRawAmount(tokenIn, amountInWei.toString());
+
+      console.log('💸 Amount in wei:', amountInWei.toString());
+      console.log('💱 Currency amount:', amountInCurrency.toSignificant(6));
 
       // Get AlphaRouter
       const router = this.getAlphaRouter();
@@ -183,7 +237,10 @@ export class Web3Utils {
       // Set default slippage if not provided
       const slippagePercent = new Percent(Math.floor((params.slippage || 0.5) * 100), 10000);
 
+      console.log('📊 Slippage percent:', slippagePercent.toSignificant(4));
+
       // Get swap route
+      console.log('🔍 Getting swap route from AlphaRouter...');
       const route = await router.route(
         amountInCurrency,
         tokenOut,
@@ -196,19 +253,31 @@ export class Web3Utils {
         }
       );
 
+      console.log('✅ Route found:', route ? 'Yes' : 'No');
+
       if (!route || !route.methodParameters) {
         throw new Error('No route found for the swap');
       }
 
+      console.log('📋 Route method parameters:', {
+        to: route.methodParameters.to,
+        value: route.methodParameters.value,
+        dataLength: route.methodParameters.calldata.length
+      });
+
       // Return transaction request with real data
-      return {
+      const transactionRequest = {
         to: route.methodParameters.to,
         data: route.methodParameters.calldata,
         value: isNativeIn ? route.methodParameters.value : '0'
       };
 
+      console.log('🎯 Final transaction request:', transactionRequest);
+
+      return transactionRequest;
+
     } catch (error) {
-      console.error('Error building swap transaction:', error);
+      console.error('❌ Error building swap transaction:', error);
       throw new Error(`Failed to build swap transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -322,7 +391,7 @@ export const NETWORKS = {
   ethereum: {
     chainId: 1,
     name: 'Ethereum',
-    rpcUrl: 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY',
+    rpcUrl: 'https://cloudflare-eth.com', // Public Cloudflare Ethereum RPC
     explorerUrl: 'https://etherscan.io',
     swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
     weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
@@ -330,7 +399,7 @@ export const NETWORKS = {
   arbitrum: {
     chainId: 42161,
     name: 'Arbitrum One',
-    rpcUrl: 'https://arb1.arbitrum.io/rpc',
+    rpcUrl: 'https://arb1.arbitrum.io/rpc', // Public Arbitrum RPC
     explorerUrl: 'https://arbiscan.io',
     swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
     weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
@@ -338,7 +407,7 @@ export const NETWORKS = {
   polygon: {
     chainId: 137,
     name: 'Polygon',
-    rpcUrl: 'https://polygon-rpc.com',
+    rpcUrl: 'https://polygon-rpc.com', // Public Polygon RPC
     explorerUrl: 'https://polygonscan.com',
     swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
     weth: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'
@@ -348,7 +417,7 @@ export const NETWORKS = {
 // Token mapping per network (symbol -> address)
 export const TOKEN_MAP = {
   ethereum: {
-    'ETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+    'ETH': '0x0000000000000000000000000000000000000000', // Native ETH
     'WETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
     'USDC': '0xA0b86a33E6441e88C5F2712C3E9b74AF6b7f9EDD',
     'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
@@ -360,7 +429,7 @@ export const TOKEN_MAP = {
     'MKR': '0x9f8F72AA9304c8B593d555F12eF6589cC3A579A2'
   },
   arbitrum: {
-    'ETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // WETH
+    'ETH': '0x0000000000000000000000000000000000000000', // Native ETH
     'WETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
     'USDC': '0xFF970A61A04b1cA14834A43f5de4533eBDDB5CC8',
     'USDT': '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
@@ -371,7 +440,7 @@ export const TOKEN_MAP = {
     'LINK': '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4'
   },
   polygon: {
-    'ETH': '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', // WETH
+    'ETH': '0x0000000000000000000000000000000000000000', // Native ETH
     'WETH': '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
     'USDC': '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
     'USDT': '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
