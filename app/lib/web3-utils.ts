@@ -4,6 +4,19 @@ import { Interface } from '@ethersproject/abi';
 import { AddressZero } from '@ethersproject/constants';
 import { formatEther, formatUnits, parseUnits } from '@ethersproject/units';
 
+// Uniswap SDK imports
+import {
+  CurrencyAmount,
+  SwapType,
+  AlphaRouter
+} from '@uniswap/smart-order-router';
+import {
+  Token,
+  TradeType,
+  Percent
+} from '@uniswap/sdk-core';
+import { MethodParameters } from '@uniswap/v3-sdk';
+
 export interface TransactionRequest {
   to: string;
   value?: string;
@@ -15,12 +28,13 @@ export interface TransactionRequest {
 }
 
 export interface SwapParams {
-  tokenIn: string;
-  tokenOut: string;
+  tokenIn: string; // Can be symbol (e.g., "USDC") or address
+  tokenOut: string; // Can be symbol (e.g., "ETH") or address
   amountIn: string;
-  amountOutMin: string;
+  amountOutMin?: string;
   recipient: string;
-  deadline: number;
+  deadline?: number;
+  slippage?: number; // slippage tolerance in percentage
 }
 
 export interface BridgeParams {
@@ -48,10 +62,67 @@ export interface FeeEstimate {
 export class Web3Utils {
   private provider: JsonRpcProvider;
   private chainId: number;
+  private network: keyof typeof NETWORKS;
+  private alphaRouter?: AlphaRouter;
 
-  constructor(rpcUrl: string, chainId: number) {
+  constructor(rpcUrl: string, chainId: number, network: keyof typeof NETWORKS) {
     this.provider = new JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
+    this.network = network;
+  }
+
+  // Helper to resolve token address from symbol or return address if already provided
+  private resolveTokenAddress(tokenInput: string, network: keyof typeof NETWORKS): string {
+    // If it's already an address (starts with 0x), return as-is
+    if (tokenInput.startsWith('0x') && tokenInput.length === 42) {
+      return tokenInput;
+    }
+
+    // Try to find by symbol (case insensitive)
+    const networkTokens = TOKEN_MAP[network];
+    const symbol = tokenInput.toUpperCase();
+    const address = networkTokens[symbol as keyof typeof networkTokens];
+
+    if (!address) {
+      throw new Error(`Token symbol "${tokenInput}" not found on ${network} network`);
+    }
+
+    return address;
+  }
+
+  // Create Token instance with proper decimals
+  private async createToken(tokenAddress: string): Promise<Token> {
+    if (tokenAddress === AddressZero) {
+      // Native token (ETH)
+      const networkConfig = Object.values(NETWORKS).find(n => n.chainId === this.chainId);
+      if (!networkConfig) {
+        throw new Error(`Network config not found for chainId ${this.chainId}`);
+      }
+      return new Token(this.chainId, networkConfig.weth, 18, 'WETH', 'Wrapped Ether');
+    }
+
+    // ERC20 token - fetch decimals
+    const tokenContract = new ethers.Contract(tokenAddress, [
+      'function decimals() view returns (uint8)',
+      'function symbol() view returns (string)',
+      'function name() view returns (string)'
+    ], this.provider);
+
+    const [decimals, symbol, name] = await Promise.all([
+      tokenContract.decimals(),
+      tokenContract.symbol().catch(() => 'UNKNOWN'),
+      tokenContract.name().catch(() => 'Unknown Token')
+    ]);
+
+    return new Token(this.chainId, tokenAddress, decimals, symbol, name);
+  }
+
+  // Get or create AlphaRouter instance
+  private getAlphaRouter(): AlphaRouter {
+    if (!this.alphaRouter) {
+      this.alphaRouter = new AlphaRouter({ chainId: this.chainId, provider: this.provider });
+    }
+    return this.alphaRouter;
   }
 
   async estimateGas(txRequest: TransactionRequest): Promise<FeeEstimate> {
@@ -87,16 +158,59 @@ export class Web3Utils {
   }
 
   async buildSwapTransaction(params: SwapParams): Promise<TransactionRequest> {
-    // This is a simplified example for Uniswap V3
-    // In production, you would use the actual Uniswap SDK
-    const uniswapV3RouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
-    
-    // Mock swap data - in production, use Uniswap SDK to encode this properly
-    return {
-      to: uniswapV3RouterAddress,
-      data: '0x', // Placeholder: actual calldata should be generated via Uniswap SDK
-      value: params.tokenIn === AddressZero ? parseUnits(params.amountIn, 18).toString() : '0'
-    };
+    try {
+      // Resolve token addresses
+      const tokenInAddress = this.resolveTokenAddress(params.tokenIn, this.network);
+      const tokenOutAddress = this.resolveTokenAddress(params.tokenOut, this.network);
+
+      // Create Token instances
+      const [tokenIn, tokenOut] = await Promise.all([
+        this.createToken(tokenInAddress),
+        this.createToken(tokenOutAddress)
+      ]);
+
+      // Determine if input is native token
+      const networkConfig = NETWORKS[this.network];
+      const isNativeIn = tokenInAddress.toLowerCase() === networkConfig.weth.toLowerCase();
+
+      // Create amount input
+      const amountInWei = parseUnits(params.amountIn, tokenIn.decimals);
+      const amountInCurrency = CurrencyAmount.fromRawAmount(tokenIn, amountInWei.toString());
+
+      // Get AlphaRouter
+      const router = this.getAlphaRouter();
+
+      // Set default slippage if not provided
+      const slippagePercent = new Percent(Math.floor((params.slippage || 0.5) * 100), 10000);
+
+      // Get swap route
+      const route = await router.route(
+        amountInCurrency,
+        tokenOut,
+        TradeType.EXACT_INPUT,
+        {
+          recipient: params.recipient,
+          slippageTolerance: slippagePercent,
+          deadline: params.deadline || Math.floor(Date.now() / 1000) + 1800, // 30 minutes
+          type: SwapType.SWAP_ROUTER_02,
+        }
+      );
+
+      if (!route || !route.methodParameters) {
+        throw new Error('No route found for the swap');
+      }
+
+      // Return transaction request with real data
+      return {
+        to: route.methodParameters.to,
+        data: route.methodParameters.calldata,
+        value: isNativeIn ? route.methodParameters.value : '0'
+      };
+
+    } catch (error) {
+      console.error('Error building swap transaction:', error);
+      throw new Error(`Failed to build swap transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async buildBridgeTransaction(params: BridgeParams): Promise<TransactionRequest> {
@@ -209,23 +323,67 @@ export const NETWORKS = {
     chainId: 1,
     name: 'Ethereum',
     rpcUrl: 'https://mainnet.infura.io/v3/YOUR_INFURA_KEY',
-    explorerUrl: 'https://etherscan.io'
+    explorerUrl: 'https://etherscan.io',
+    swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
   },
   arbitrum: {
     chainId: 42161,
     name: 'Arbitrum One',
     rpcUrl: 'https://arb1.arbitrum.io/rpc',
-    explorerUrl: 'https://arbiscan.io'
+    explorerUrl: 'https://arbiscan.io',
+    swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
   },
   polygon: {
     chainId: 137,
     name: 'Polygon',
     rpcUrl: 'https://polygon-rpc.com',
-    explorerUrl: 'https://polygonscan.com'
+    explorerUrl: 'https://polygonscan.com',
+    swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    weth: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270'
+  }
+};
+
+// Token mapping per network (symbol -> address)
+export const TOKEN_MAP = {
+  ethereum: {
+    'ETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+    'WETH': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    'USDC': '0xA0b86a33E6441e88C5F2712C3E9b74AF6b7f9EDD',
+    'USDT': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    'DAI': '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    'WBTC': '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+    'UNI': '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
+    'AAVE': '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+    'LINK': '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+    'MKR': '0x9f8F72AA9304c8B593d555F12eF6589cC3A579A2'
+  },
+  arbitrum: {
+    'ETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // WETH
+    'WETH': '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    'USDC': '0xFF970A61A04b1cA14834A43f5de4533eBDDB5CC8',
+    'USDT': '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+    'DAI': '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+    'WBTC': '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
+    'UNI': '0xFa7F8980b0f1E64A2062791cc3b0871572f1Ba7B',
+    'AAVE': '0xba5DdD1f9d7F570dc7aEC1179d7e5a3C7e9E8C3',
+    'LINK': '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4'
+  },
+  polygon: {
+    'ETH': '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', // WETH
+    'WETH': '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
+    'USDC': '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+    'USDT': '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+    'DAI': '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
+    'WBTC': '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6',
+    'UNI': '0xb33EaAd8d922B1083446DC23f610c2567fB5180f2',
+    'AAVE': '0xD6DF932A45C0f255f85145f286eA0b292B21C90B',
+    'LINK': '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39'
   }
 };
 
 export function getWeb3Utils(network: keyof typeof NETWORKS): Web3Utils {
   const config = NETWORKS[network];
-  return new Web3Utils(config.rpcUrl, config.chainId);
+  return new Web3Utils(config.rpcUrl, config.chainId, network);
 }

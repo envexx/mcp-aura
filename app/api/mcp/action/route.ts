@@ -17,9 +17,11 @@ const actionSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    const normalizedBody = normalizePayload(body);
     
     // Validate request body
-    const validation = actionSchema.safeParse(body);
+    const validation = actionSchema.safeParse(normalizedBody);
     if (!validation.success) {
       return NextResponse.json(
         { error: 'Invalid request parameters', details: validation.error.errors },
@@ -52,9 +54,9 @@ export async function POST(request: NextRequest) {
             tokenIn,
             tokenOut,
             amountIn,
-            amountOutMin: calculateMinAmountOut(amountIn, slippage),
             recipient: fromAddress,
-            deadline: deadline || Math.floor(Date.now() / 1000) + 1800 // 30 minutes
+            deadline: deadline || Math.floor(Date.now() / 1000) + 1800, // 30 minutes
+            slippage: parseFloat(slippage)
           });
           break;
 
@@ -155,11 +157,64 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // Helper functions
-function calculateMinAmountOut(amountIn: string, slippage: string): string {
-  const amount = parseFloat(amountIn);
-  const slippagePercent = parseFloat(slippage) / 100;
-  const minAmount = amount * (1 - slippagePercent);
-  return minAmount.toString();
+function normalizePayload(payload: Record<string, unknown>) {
+  const rawNetwork = typeof payload.network === 'string' ? payload.network : undefined;
+  const normalizedNetwork = rawNetwork ? normalizeNetwork(rawNetwork) : undefined;
+
+  const rawSlippage = typeof payload.slippage === 'string' ? payload.slippage : undefined;
+  const normalizedSlippage = rawSlippage ? rawSlippage.replace('%', '').trim() : undefined;
+
+  const platform = typeof payload.platform === 'string' && payload.platform.trim().length > 0
+    ? payload.platform.trim()
+    : 'Uniswap';
+
+  const operation = typeof payload.operation === 'string'
+    ? payload.operation.trim().toLowerCase()
+    : payload.operation;
+
+  const amountIn = typeof payload.amountIn === 'number'
+    ? payload.amountIn.toString()
+    : typeof payload.amountIn === 'string'
+      ? normalizeNumericString(payload.amountIn)
+      : payload.amountIn;
+
+  return {
+    ...payload,
+    fromAddress: typeof payload.fromAddress === 'string' ? payload.fromAddress.trim() : payload.fromAddress,
+    tokenIn: typeof payload.tokenIn === 'string' ? payload.tokenIn.trim() : payload.tokenIn,
+    tokenOut: typeof payload.tokenOut === 'string' ? payload.tokenOut.trim() : payload.tokenOut,
+    amountIn,
+    network: normalizedNetwork,
+    slippage: normalizedSlippage,
+    platform,
+    operation
+  };
+}
+
+function normalizeNetwork(value: string) {
+  const cleaned = value.trim().toLowerCase();
+  const aliases: Record<string, typeof NETWORK_OPTIONS[number]> = {
+    ethereum: 'ethereum',
+    'eth': 'ethereum',
+    'mainnet': 'ethereum',
+    'ethereum mainnet': 'ethereum',
+    'arbitrum': 'arbitrum',
+    'arbitrum one': 'arbitrum',
+    'arb': 'arbitrum',
+    'polygon': 'polygon',
+    'matic': 'polygon',
+    'polygon mainnet': 'polygon'
+  };
+
+  return aliases[cleaned] ?? cleaned;
+}
+
+const NETWORK_OPTIONS = ['ethereum', 'arbitrum', 'polygon'] as const;
+
+function normalizeNumericString(value: string) {
+  const cleaned = value.trim();
+  const match = cleaned.match(/\d+(?:\.\d+)?/);
+  return match ? match[0] : cleaned;
 }
 
 async function buildStakeTransaction(platform: string, params: {

@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
             tokenIn,
             tokenOut,
             amountIn,
-            amountOutMin: calculateMinAmountOut(amountIn, '0.5'), // 0.5% slippage
             recipient: fromAddress,
-            deadline: Math.floor(Date.now() / 1000) + 1800 // 30 minutes
+            deadline: Math.floor(Date.now() / 1000) + 1800, // 30 minutes
+            slippage: 0.5 // 0.5% slippage
           });
 
           operationDetails = {
@@ -231,13 +231,6 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 // Helper functions
-function calculateMinAmountOut(amountIn: string, slippage: string): string {
-  const amount = parseFloat(amountIn);
-  const slippagePercent = parseFloat(slippage) / 100;
-  const minAmount = amount * (1 - slippagePercent);
-  return minAmount.toString();
-}
-
 function generateQRCodeUrl(data: string): string {
   // Generate QR code URL using a service like qr-server.com
   return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(data)}`;
