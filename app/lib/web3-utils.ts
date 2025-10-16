@@ -2,9 +2,7 @@ import { ethers, BigNumber } from 'ethers';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { Interface } from '@ethersproject/abi';
 import { AddressZero } from '@ethersproject/constants';
-import { solidityPack } from '@ethersproject/solidity';
 import { formatEther, formatUnits, parseUnits } from '@ethersproject/units';
-import { hexlify, randomBytes } from '@ethersproject/bytes';
 
 export interface TransactionRequest {
   to: string;
@@ -94,20 +92,9 @@ export class Web3Utils {
     const uniswapV3RouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
     
     // Mock swap data - in production, use Uniswap SDK to encode this properly
-    const swapData = solidityPack(
-      ['address', 'uint256', 'address', 'uint256', 'uint256'],
-      [
-        params.tokenIn,
-        parseUnits(params.amountIn, 18),
-        params.tokenOut,
-        parseUnits(params.amountOutMin, 18),
-        params.deadline
-      ]
-    );
-
     return {
       to: uniswapV3RouterAddress,
-      data: swapData,
+      data: '0x', // Placeholder: actual calldata should be generated via Uniswap SDK
       value: params.tokenIn === AddressZero ? parseUnits(params.amountIn, 18).toString() : '0'
     };
   }
@@ -118,19 +105,9 @@ export class Web3Utils {
     const stargateRouterAddress = '0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614';
     
     // Mock bridge data
-    const bridgeData = solidityPack(
-      ['address', 'uint256', 'string', 'address'],
-      [
-        params.token,
-        parseUnits(params.amount, 18),
-        params.destinationChain,
-        params.recipient
-      ]
-    );
-
     return {
       to: stargateRouterAddress,
-      data: bridgeData,
+      data: '0x',
       value: '0'
     };
   }
@@ -195,7 +172,7 @@ export class Web3Utils {
         status: receipt.status === 1 ? 'success' : 'failed',
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
-        effectiveGasPrice: receipt.gasPrice?.toString()
+        effectiveGasPrice: receipt.effectiveGasPrice?.toString()
       };
     } catch (error) {
       console.error('Error getting transaction status:', error);
@@ -214,7 +191,7 @@ export class Web3Utils {
       topic: `mcp-aura-${Date.now()}`,
       version: '2',
       bridge: 'https://bridge.walletconnect.org',
-      key: hexlify(randomBytes(32)),
+      key: ethers.utils.hexlify(ethers.utils.randomBytes(32)),
       chainId: this.chainId,
       operation: params.operation,
       txData: params.txData,
