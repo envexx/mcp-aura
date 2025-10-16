@@ -1,0 +1,212 @@
+{
+  "mcpServers": {
+    "envxx-mcp-aura": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  },
+  "server": {
+    "name": "ENVXX MCP AURA",
+    "version": "1.0.0",
+    "description": "Smart Chatbot Onchain MCP AURA by ENVXX - AI-powered DeFi portfolio management with AURA API integration",
+    "author": "ENVXX",
+    "homepage": "https://mcp-aura.vercel.app",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/envexx/mcp-aura.git"
+    },
+    "serverUrl": "https://mcp-aura.vercel.app/mcp"
+  },
+  "tools": [
+    {
+      "name": "get_portfolio",
+      "description": "Analyze DeFi portfolio across multiple blockchain networks using AURA API",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Wallet address to analyze (0x...)",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "chains": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["ethereum", "arbitrum", "polygon", "bsc", "avalanche"]
+            },
+            "description": "Blockchain networks to analyze",
+            "default": ["ethereum"]
+          }
+        },
+        "required": ["address"]
+      }
+    },
+    {
+      "name": "get_strategy",
+      "description": "Get AI-powered DeFi strategy recommendations using AURA API",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Wallet address for strategy analysis",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Risk tolerance level",
+            "default": "medium"
+          },
+          "strategy_type": {
+            "type": "string",
+            "enum": ["yield_farming", "staking", "liquidity_provision", "arbitrage", "lending", "all"],
+            "description": "Type of DeFi strategy to recommend",
+            "default": "all"
+          },
+          "min_apy": {
+            "type": "number",
+            "description": "Minimum APY requirement (%)",
+            "minimum": 0,
+            "default": 5
+          }
+        },
+        "required": ["address"]
+      }
+    },
+    {
+      "name": "execute_action",
+      "description": "Execute DeFi actions like swaps, stakes, or liquidity provision",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["swap", "stake", "unstake", "provide_liquidity", "remove_liquidity", "lend", "borrow"],
+            "description": "Type of DeFi action to execute"
+          },
+          "fromToken": {
+            "type": "string",
+            "description": "Source token symbol (e.g., ETH, USDC)"
+          },
+          "toToken": {
+            "type": "string",
+            "description": "Destination token symbol (e.g., USDC, DAI)"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount to process (in token units)"
+          },
+          "slippage": {
+            "type": "number",
+            "description": "Maximum slippage tolerance (%)",
+            "minimum": 0.1,
+            "maximum": 50,
+            "default": 0.5
+          },
+          "chain": {
+            "type": "string",
+            "enum": ["ethereum", "arbitrum", "polygon", "bsc", "avalanche"],
+            "description": "Blockchain network",
+            "default": "ethereum"
+          },
+          "protocol": {
+            "type": "string",
+            "description": "DeFi protocol to use (e.g., Uniswap, Aave, Compound)"
+          }
+        },
+        "required": ["action", "amount", "chain"]
+      }
+    },
+    {
+      "name": "transfer_tokens",
+      "description": "Transfer tokens between wallets with fee estimation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fromAddress": {
+            "type": "string",
+            "description": "Source wallet address",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "toAddress": {
+            "type": "string",
+            "description": "Destination wallet address",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "token": {
+            "type": "string",
+            "description": "Token symbol to transfer (e.g., ETH, USDC, DAI)"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount to transfer (in token units)"
+          },
+          "chain": {
+            "type": "string",
+            "enum": ["ethereum", "arbitrum", "polygon", "bsc", "avalanche"],
+            "description": "Blockchain network",
+            "default": "ethereum"
+          }
+        },
+        "required": ["fromAddress", "toAddress", "token", "amount"]
+      }
+    },
+    {
+      "name": "estimate_fees",
+      "description": "Estimate gas fees for DeFi transactions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["swap", "transfer", "stake", "unstake", "provide_liquidity", "remove_liquidity"],
+            "description": "Type of transaction to estimate"
+          },
+          "chain": {
+            "type": "string",
+            "enum": ["ethereum", "arbitrum", "polygon", "bsc", "avalanche"],
+            "description": "Blockchain network",
+            "default": "ethereum"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["slow", "standard", "fast"],
+            "description": "Transaction priority level",
+            "default": "standard"
+          }
+        },
+        "required": ["action", "chain"]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "uri": "aura://portfolio/{address}",
+      "name": "Portfolio Analysis",
+      "description": "Real-time portfolio analysis for a wallet address",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "aura://strategy/{address}",
+      "name": "Strategy Recommendations",
+      "description": "AI-powered DeFi strategy recommendations",
+      "mimeType": "application/json"
+    },
+    {
+      "uri": "aura://market/overview",
+      "name": "Market Overview",
+      "description": "Current DeFi market conditions and opportunities",
+      "mimeType": "application/json"
+    }
+  ],
+  "capabilities": {
+    "tools": {},
+    "resources": {},
+    "prompts": {}
+  }
+}

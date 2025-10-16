@@ -1,0 +1,584 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ENVXX MCP AURA - Smart Chatbot Onchain",
+    "description": "AI-powered DeFi portfolio management with AURA API integration for intelligent Web3 automation",
+    "version": "1.0.0",
+    "contact": {
+      "name": "ENVXX",
+      "url": "https://github.com/envexx/mcp-aura"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://mcp-aura.vercel.app",
+      "description": "ENVXX MCP AURA Production Server"
+    }
+  ],
+  "paths": {
+    "/mcp": {
+      "get": {
+        "summary": "MCP Server Info",
+        "description": "Get MCP server information and available tools",
+        "operationId": "getMCPInfo",
+        "responses": {
+          "200": {
+            "description": "MCP server information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPServerInfo"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Execute MCP Tools",
+        "description": "Execute MCP tools for AURA DeFi operations",
+        "operationId": "executeMCPTool",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MCPRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tool execution result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MCPResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/portfolio": {
+      "get": {
+        "summary": "Get Portfolio Analysis",
+        "description": "Analyze DeFi portfolio across multiple chains using AURA API",
+        "operationId": "getPortfolioAnalysis",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$"
+            },
+            "description": "Wallet address to analyze"
+          },
+          {
+            "name": "chains",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ethereum", "arbitrum", "polygon", "all"]
+            },
+            "description": "Blockchain networks to analyze"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portfolio analysis results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioAnalysis"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/strategy": {
+      "get": {
+        "summary": "Get DeFi Strategy Recommendations",
+        "description": "Get AI-powered DeFi strategy recommendations using AURA API",
+        "operationId": "getStrategyRecommendations",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[a-fA-F0-9]{40}$"
+            },
+            "description": "Wallet address for strategy analysis"
+          },
+          {
+            "name": "risk_level",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["low", "medium", "high"]
+            },
+            "description": "Risk tolerance level"
+          },
+          {
+            "name": "strategy_type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["yield_farming", "staking", "liquidity_provision", "arbitrage", "all"]
+            },
+            "description": "Type of DeFi strategy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Strategy recommendations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StrategyRecommendations"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/action": {
+      "post": {
+        "summary": "Execute DeFi Action",
+        "description": "Execute DeFi actions like swaps, stakes, or transfers",
+        "operationId": "executeDeFiAction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeFiActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Action execution result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/transfer": {
+      "post": {
+        "summary": "Transfer Tokens",
+        "description": "Transfer tokens between wallets with fee estimation",
+        "operationId": "transferTokens",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transfer result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransferResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mcp/sign-request": {
+      "post": {
+        "summary": "Sign Transaction Request",
+        "description": "Generate transaction for wallet signing",
+        "operationId": "signTransactionRequest",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction to sign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MCPServerInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "ENVXX MCP AURA"
+          },
+          "version": {
+            "type": "string",
+            "example": "1.0.0"
+          },
+          "description": {
+            "type": "string",
+            "example": "Smart Chatbot Onchain MCP AURA by ENVXX"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["get_portfolio", "get_strategy", "execute_action", "transfer_tokens", "estimate_fees"]
+          }
+        }
+      },
+      "MCPRequest": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": ["tools/call", "resources/read"]
+          },
+          "params": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      "MCPResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["text", "resource"]
+                },
+                "text": {
+                  "type": "string"
+                },
+                "resource": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "isError": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PortfolioAnalysis": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "example": "0x742d35Cc6634C0532925a3b8D8C9C8C8C8C8C8C8"
+          },
+          "totalValue": {
+            "type": "number",
+            "example": 15420.50
+          },
+          "chains": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "ethereum"
+                },
+                "value": {
+                  "type": "number",
+                  "example": 8500.25
+                },
+                "tokens": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "symbol": {
+                        "type": "string",
+                        "example": "ETH"
+                      },
+                      "balance": {
+                        "type": "number",
+                        "example": 2.5
+                      },
+                      "value": {
+                        "type": "number",
+                        "example": 5000.00
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "defiPositions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "protocol": {
+                  "type": "string",
+                  "example": "Uniswap V3"
+                },
+                "type": {
+                  "type": "string",
+                  "example": "liquidity_provision"
+                },
+                "value": {
+                  "type": "number",
+                  "example": 1200.00
+                },
+                "apy": {
+                  "type": "number",
+                  "example": 12.5
+                }
+              }
+            }
+          }
+        }
+      },
+      "StrategyRecommendations": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "strategies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "example": "aura-yield-eth-usdc"
+                },
+                "name": {
+                  "type": "string",
+                  "example": "ETH-USDC Yield Farming"
+                },
+                "protocol": {
+                  "type": "string",
+                  "example": "Aave"
+                },
+                "apy": {
+                  "type": "number",
+                  "example": 8.5
+                },
+                "risk": {
+                  "type": "string",
+                  "enum": ["low", "medium", "high"],
+                  "example": "medium"
+                },
+                "tvl": {
+                  "type": "number",
+                  "example": 50000000
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Provide liquidity to ETH-USDC pool on Aave for stable yield"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "step": {
+                        "type": "number"
+                      },
+                      "action": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "DeFiActionRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["swap", "stake", "unstake", "provide_liquidity", "remove_liquidity"]
+          },
+          "fromToken": {
+            "type": "string",
+            "example": "ETH"
+          },
+          "toToken": {
+            "type": "string",
+            "example": "USDC"
+          },
+          "amount": {
+            "type": "string",
+            "example": "1.0"
+          },
+          "slippage": {
+            "type": "number",
+            "example": 0.5
+          },
+          "chain": {
+            "type": "string",
+            "example": "ethereum"
+          }
+        }
+      },
+      "ActionResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "transactionHash": {
+            "type": "string"
+          },
+          "gasUsed": {
+            "type": "number"
+          },
+          "gasFee": {
+            "type": "number"
+          },
+          "executedAmount": {
+            "type": "string"
+          },
+          "receivedAmount": {
+            "type": "string"
+          }
+        }
+      },
+      "TransferRequest": {
+        "type": "object",
+        "properties": {
+          "fromAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "toAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$"
+          },
+          "token": {
+            "type": "string",
+            "example": "USDC"
+          },
+          "amount": {
+            "type": "string",
+            "example": "100.0"
+          },
+          "chain": {
+            "type": "string",
+            "example": "ethereum"
+          }
+        }
+      },
+      "TransferResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "transactionHash": {
+            "type": "string"
+          },
+          "estimatedGas": {
+            "type": "number"
+          },
+          "gasFee": {
+            "type": "number"
+          }
+        }
+      },
+      "SignRequest": {
+        "type": "object",
+        "properties": {
+          "transaction": {
+            "type": "object",
+            "properties": {
+              "to": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string"
+              },
+              "gasLimit": {
+                "type": "string"
+              },
+              "gasPrice": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "SignResponse": {
+        "type": "object",
+        "properties": {
+          "transaction": {
+            "type": "object"
+          },
+          "signature": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
