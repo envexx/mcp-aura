@@ -458,29 +458,46 @@
           "action": {
             "type": "string",
             "enum": ["swap", "stake", "bridge"],
+            "description": "Type of DeFi action to perform",
             "example": "swap"
           },
           "fromToken": {
             "type": "string",
+            "description": "Input token symbol or address",
             "example": "ETH"
           },
           "toToken": {
             "type": "string",
-            "example": "DAI"
+            "description": "Output token symbol or address",
+            "example": "USDT"
           },
           "amount": {
             "type": "string",
+            "description": "Amount to swap/stake/bridge",
             "example": "0.01"
           },
           "slippage": {
             "type": "number",
+            "description": "Slippage tolerance in percentage (0.5 = 0.5%)",
             "example": 0.5,
-            "description": "Slippage tolerance in percentage"
+            "default": 0.5
           },
           "chain": {
             "type": "string",
             "enum": ["ethereum", "arbitrum", "polygon"],
+            "description": "Blockchain network",
             "example": "ethereum"
+          },
+          "platform": {
+            "type": "string",
+            "description": "DeFi platform to use (optional, defaults to Uniswap for swaps)",
+            "example": "Uniswap",
+            "default": "Uniswap"
+          },
+          "deadline": {
+            "type": "number",
+            "description": "Transaction deadline in seconds from now (optional, defaults to 30 minutes)",
+            "example": 1800
           }
         },
         "required": ["action", "fromToken", "toToken", "amount", "chain"]
@@ -489,22 +506,128 @@
         "type": "object",
         "properties": {
           "success": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the action was prepared successfully",
+            "example": true
           },
-          "transactionHash": {
-            "type": "string"
+          "data": {
+            "type": "object",
+            "properties": {
+              "actionId": {
+                "type": "string",
+                "description": "Unique identifier for tracking the action",
+                "example": "action_1634567890123_abc123def"
+              },
+              "operation": {
+                "type": "string",
+                "description": "The operation type performed",
+                "example": "swap"
+              },
+              "platform": {
+                "type": "string",
+                "description": "DeFi platform used",
+                "example": "Uniswap"
+              },
+              "network": {
+                "type": "string",
+                "description": "Blockchain network",
+                "example": "ethereum"
+              },
+              "transactionRequest": {
+                "type": "object",
+                "description": "Prepared transaction data ready for signing",
+                "properties": {
+                  "to": {
+                    "type": "string",
+                    "description": "Contract address to send transaction to",
+                    "example": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "ETH value to send (in wei)",
+                    "example": "10000000000000000"
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "Encoded function call data",
+                    "example": "0x414bf389..."
+                  }
+                }
+              },
+              "estimatedFees": {
+                "type": "object",
+                "description": "Gas fee estimates",
+                "properties": {
+                  "gasLimit": {
+                    "type": "string",
+                    "example": "200000"
+                  },
+                  "gasPrice": {
+                    "type": "string",
+                    "example": "20000000000"
+                  },
+                  "totalFeeETH": {
+                    "type": "string",
+                    "example": "0.004"
+                  },
+                  "totalFeeUSD": {
+                    "type": "string",
+                    "example": "8.50"
+                  }
+                }
+              },
+              "status": {
+                "type": "string",
+                "description": "Action status",
+                "example": "prepared"
+              },
+              "requiresSignature": {
+                "type": "boolean",
+                "description": "Whether the transaction requires user signature",
+                "example": true
+              },
+              "metadata": {
+                "type": "object",
+                "description": "Additional action metadata",
+                "properties": {
+                  "tokenIn": {
+                    "type": "string",
+                    "example": "ETH"
+                  },
+                  "tokenOut": {
+                    "type": "string",
+                    "example": "USDT"
+                  },
+                  "amountIn": {
+                    "type": "string",
+                    "example": "0.01"
+                  },
+                  "slippage": {
+                    "type": "string",
+                    "example": "0.5"
+                  },
+                  "deadline": {
+                    "type": "number",
+                    "example": 1634567890
+                  },
+                  "estimatedTime": {
+                    "type": "string",
+                    "example": "2-5 minutes"
+                  },
+                  "riskLevel": {
+                    "type": "string",
+                    "enum": ["low", "moderate", "high"],
+                    "example": "low"
+                  }
+                }
+              }
+            }
           },
-          "gasUsed": {
-            "type": "number"
-          },
-          "gasFee": {
-            "type": "number"
-          },
-          "executedAmount": {
-            "type": "string"
-          },
-          "receivedAmount": {
-            "type": "string"
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Response timestamp",
+            "example": "2023-10-18T10:30:00.000Z"
           }
         }
       },
