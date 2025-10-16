@@ -112,6 +112,32 @@ export async function POST(request: NextRequest) {
     // Generate action ID for tracking
     const actionId = `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // Store action data for wallet pages
+    const actionData = {
+      actionId,
+      operation,
+      platform,
+      network,
+      transactionRequest,
+      estimatedFees,
+      status: 'prepared',
+      requiresSignature: true,
+      metadata: {
+        tokenIn,
+        tokenOut,
+        amountIn,
+        slippage,
+        deadline,
+        estimatedTime: '2-5 minutes',
+        riskLevel: getRiskLevel(operation, platform)
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    // Store in temporary store (in production, use database)
+    (global as any).actionStore = (global as any).actionStore || new Map();
+    (global as any).actionStore.set(actionId, actionData);
+
     const response = NextResponse.json({
       success: true,
       data: {
@@ -123,6 +149,8 @@ export async function POST(request: NextRequest) {
         estimatedFees,
         status: 'prepared',
         requiresSignature: true,
+        walletConnectionUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/connect?actionId=${actionId}`,
+        signingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/sign?actionId=${actionId}`,
         metadata: {
           tokenIn,
           tokenOut,
