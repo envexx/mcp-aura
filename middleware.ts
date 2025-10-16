@@ -1,3 +1,4 @@
+// ENVXX MCP AURA - CORS middleware for ChatGPT iframe integration
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 

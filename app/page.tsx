@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   useWidgetProps,
@@ -23,13 +22,7 @@ export default function Home() {
   const name = toolOutput?.result?.structuredContent?.name || toolOutput?.name;
 
   return (
-    <div
-      className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center p-8 pb-20 gap-16 sm:p-20"
-      style={{
-        maxHeight,
-        height: displayMode === "fullscreen" ? maxHeight : undefined,
-      }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {displayMode !== "fullscreen" && (
         <button
           aria-label="Enter fullscreen"
@@ -52,78 +45,287 @@ export default function Home() {
           </svg>
         </button>
       )}
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        {!isChatGptApp && (
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 w-full">
-            <div className="flex items-center gap-3">
-              <svg
-                className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                aria-hidden="true"
+      
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+          {!isChatGptApp && (
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">AI</span>
+                </div>
+                <div className="text-sm text-blue-800 dark:text-blue-200">
+                  This app works best when connected to ChatGPT via MCP
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-lg">✨</span>
+              </div>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Smart Chatbot Onchain MCP AURA
+              </h1>
+            </div>
+            
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              AI-powered DeFi assistant that analyzes portfolios, recommends strategies, and executes onchain actions seamlessly through natural language conversations.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+              <Link
+                href="/portfolio"
+                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 justify-center"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
-                  This app relies on data from a ChatGPT session.
-                </p>
-                <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">
-                  No{" "}
-                  <a
-                    href="https://developers.openai.com/apps-sdk/reference"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:no-underline font-mono bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded"
-                  >
-                    window.openai
-                  </a>{" "}
-                  property detected
-                </p>
+                💼 Analyze Portfolio
+              </Link>
+              <Link
+                href="/strategy"
+                className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 justify-center"
+              >
+                🎯 Get Strategies
+              </Link>
+            </div>
+
+            {/* Demo Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              Live Demo Ready • MCP Server Active
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Features Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+            Comprehensive DeFi Automation
+          </h2>
+          <p className="text-lg text-gray-600">
+            Everything you need for intelligent DeFi portfolio management
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+          {/* Portfolio Analysis */}
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow flex flex-col h-full">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">💼</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Portfolio Analysis
+            </h3>
+            <p className="text-gray-600 mb-4 flex-grow">
+              Multi-chain portfolio tracking with real-time balances, token prices, and DeFi positions across Ethereum, Arbitrum, and Polygon.
+            </p>
+            <Link
+              href="/portfolio"
+              className="text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium mt-auto"
+            >
+              Try it now →
+            </Link>
+          </div>
+
+          {/* AI Strategy Recommendations */}
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow flex flex-col h-full">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">🎯</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              AI Strategy Recommendations
+            </h3>
+            <p className="text-gray-600 mb-4 flex-grow">
+              Get personalized DeFi strategies powered by AURA API with yield farming, staking, and cross-chain opportunities.
+            </p>
+            <Link
+              href="/strategy"
+              className="text-purple-600 hover:text-purple-800 flex items-center gap-1 font-medium mt-auto"
+            >
+              Get strategies →
+            </Link>
+          </div>
+
+          {/* One-Click Execution */}
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow flex flex-col h-full">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              One-Click Execution
+            </h3>
+            <p className="text-gray-600 mb-4 flex-grow">
+              Execute swaps, stakes, bridges, and transfers directly from chat with wallet integration and fee estimation.
+            </p>
+            <div className="text-green-600 font-medium mt-auto">
+              Coming soon
+            </div>
+          </div>
+
+          {/* Yield Optimization */}
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow flex flex-col h-full">
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">📈</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Yield Optimization
+            </h3>
+            <p className="text-gray-600 mb-4 flex-grow">
+              Maximize returns with intelligent yield farming recommendations and automated position management.
+            </p>
+            <div className="text-yellow-600 font-medium mt-auto">
+              Integrated
+            </div>
+          </div>
+
+          {/* Security First */}
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow flex flex-col h-full">
+            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">🛡️</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Security First
+            </h3>
+            <p className="text-gray-600 mb-4 flex-grow">
+              Non-custodial design with transaction simulation, slippage protection, and multi-signature support.
+            </p>
+            <div className="text-red-600 font-medium mt-auto">
+              Built-in
+            </div>
+          </div>
+
+          {/* Cross-Chain Support */}
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow flex flex-col h-full">
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+              <span className="text-2xl">🌐</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Cross-Chain Support
+            </h3>
+            <p className="text-gray-600 mb-4 flex-grow">
+              Seamless operations across Ethereum, Arbitrum, Polygon with unified bridge and swap recommendations.
+            </p>
+            <div className="text-indigo-600 font-medium mt-auto">
+              Multi-chain
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* API Integration */}
+      <div className="bg-gray-50 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              MCP API Integration
+            </h2>
+            <p className="text-lg text-gray-600">
+              RESTful APIs ready for ChatGPT, Claude, and other AI assistants
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Endpoints</h3>
+              <div className="space-y-3 text-sm font-mono">
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">GET</span>
+                  <code className="text-gray-700">/api/mcp/portfolio</code>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-semibold">GET</span>
+                  <code className="text-gray-700">/api/mcp/strategy</code>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">POST</span>
+                  <code className="text-gray-700">/api/mcp/action</code>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">POST</span>
+                  <code className="text-gray-700">/api/mcp/transfer</code>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">POST</span>
+                  <code className="text-gray-700">/api/mcp/sign-request</code>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">MCP Tools</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <div>
+                    <code className="font-semibold text-gray-900">get_portfolio</code>
+                    <span className="text-gray-600 ml-2">- Portfolio analysis</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <div>
+                    <code className="font-semibold text-gray-900">get_strategy</code>
+                    <span className="text-gray-600 ml-2">- Strategy recommendations</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <div>
+                    <code className="font-semibold text-gray-900">execute_action</code>
+                    <span className="text-gray-600 ml-2">- DeFi actions</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <div>
+                    <code className="font-semibold text-gray-900">transfer_tokens</code>
+                    <span className="text-gray-600 ml-2">- Token transfers</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <div>
+                    <code className="font-semibold text-gray-900">estimate_fees</code>
+                    <span className="text-gray-600 ml-2">- Gas estimation</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        )}
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Welcome to the ChatGPT Apps SDK Next.js Starter
-          </li>
-          <li className="mb-2 tracking-[-.01em]">
-            Name returned from tool call: {name ?? "..."}
-          </li>
-          <li className="mb-2 tracking-[-.01em]">MCP server path: /mcp</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <Link
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            prefetch={false}
-            href="/custom-page"
-          >
-            Visit another page
-          </Link>
-          <a
-            href="https://vercel.com/templates/ai/chatgpt-app-with-next-js"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            Deploy on Vercel
-          </a>
         </div>
-      </main>
+      </div>
+
+      {/* CTA Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 py-16">
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Ready to Optimize Your DeFi Portfolio?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Connect your wallet and let AI guide your DeFi journey
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/portfolio"
+              className="px-8 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-100 transition-colors font-semibold flex items-center justify-center gap-2"
+            >
+              💼 Start Analysis
+            </Link>
+            <a
+              href="https://github.com/your-repo/smart-chatbot-onchain-mcp-aura"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-8 py-3 border-2 border-white text-white rounded-lg hover:bg-white hover:text-blue-600 transition-colors font-semibold flex items-center justify-center gap-2"
+            >
+              📚 View Documentation
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

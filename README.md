@@ -1,10 +1,10 @@
-# ChatGPT Apps SDK Next.js Starter
+# Smart Chatbot Onchain MCP AURA by ENVXX
 
-A minimal Next.js application demonstrating how to build an [OpenAI Apps SDK](https://developers.openai.com/apps-sdk) compatible MCP server with widget rendering in ChatGPT.
+An advanced Next.js application demonstrating AI-powered DeFi portfolio management using the [OpenAI Apps SDK](https://developers.openai.com/apps-sdk) with MCP server integration and AURA API for Web3 automation.
 
 ## Overview
 
-This project shows how to integrate a Next.js application with the ChatGPT Apps SDK using the Model Context Protocol (MCP). It includes a working MCP server that exposes tools and resources that can be called from ChatGPT, with responses rendered natively in ChatGPT.
+This project demonstrates the **Smart Chatbot Onchain MCP AURA** system built by **ENVXX** - an AI-powered DeFi assistant that integrates AdEx AURA API to provide intelligent Web3 portfolio management through ChatGPT. The system includes comprehensive MCP tools for portfolio analysis, strategy recommendations, and automated DeFi operations across multiple blockchains.
 
 ## Key Components
 
@@ -105,8 +105,8 @@ http://localhost:3000/mcp
 
 ### Connecting from ChatGPT
 
-1. [Deploy your app to Vercel](https://vercel.com/new/clone?demo-description=Ship%20an%20ChatGPT%20app%20on%20Vercel%20with%20Next.js%20and%20Model%20Context%20Protocol%20%28MCP%29.%0A&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F5TdbPy0tev8hh3rTOsdfMm%2F155b970ca5e75adb74206db26493efc7%2Fimage.png&demo-title=ChatGPT%20app%20with%20Next.js&demo-url=https%3A%2F%2Fchatgpt-apps-sdk-nextjs-starter.labs.vercel.dev%2F&from=templates&project-name=ChatGPT%20app%20with%20Next.js&project-names=Comma%20separated%20list%20of%20project%20names%2Cto%20match%20the%20root-directories&repository-name=chatgpt-app-with-next-js&repository-url=https%3A%2F%2Fgithub.com%2Fvercel-labs%2Fchatgpt-apps-sdk-nextjs-starter&root-directories=List%20of%20directory%20paths%20for%20the%20directories%20to%20clone%20into%20projects&skippable-integrations=1&teamSlug=vercel)
-3. In ChatGPT, navigate to **Settings → [Connectors](https://chatgpt.com/#settings/Connectors) → Create** and add your MCP server URL with the `/mcp` path (e.g., `https://your-app.vercel.app/mcp`)
+1. Deploy your ENVXX MCP AURA app to your preferred hosting platform
+2. In ChatGPT, navigate to **Settings → [Connectors](https://chatgpt.com/#settings/Connectors) → Create** and add your MCP server URL with the `/mcp` path (e.g., `https://your-mcp-aura-app.com/mcp`)
 
 **Note:** Connecting MCP servers to ChatGPT requires developer mode access. See the [connection guide](https://developers.openai.com/apps-sdk/deploy/connect-chatgpt) for setup instructions.
 
@@ -141,11 +141,14 @@ next.config.ts            # Asset prefix configuration
 
 ## Deployment
 
-This project is designed to work seamlessly with [Vercel](https://vercel.com) deployment. The `baseUrl.ts` configuration automatically detects Vercel environment variables and sets the correct asset URLs.
+This **ENVXX MCP AURA** project is designed to work with various hosting platforms. The `baseUrl.ts` configuration automatically detects environment variables and sets the correct asset URLs for your deployment.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel-labs/chatgpt-apps-sdk-nextjs-starter)
+**Deploy to your preferred platform:**
+- Vercel, Netlify, Railway, or any Node.js hosting service
+- Ensure environment variables are properly configured
+- The MCP server will be available at `https://your-domain.com/mcp`
 
 The configuration automatically handles:
-- Production URLs via `VERCEL_PROJECT_PRODUCTION_URL`
-- Preview/branch URLs via `VERCEL_BRANCH_URL`
+- Production URLs via environment variables
+- Preview/branch URLs for testing
 - Asset prefixing for correct resource loading in iframes
