@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 
 interface WalletSignPageProps {
@@ -13,10 +13,66 @@ function WalletSignContent({ searchParams }: WalletSignPageProps) {
   const [actionData, setActionData] = useState<any>(null);
 
   const { address, isConnected } = useAccount();
-  const { sendTransaction, isPending: isSendPending, data: txHash } = useSendTransaction();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+  const {
+    sendTransaction,
+    isPending: isSendPending,
+    data: txHash,
+    error: sendError,
+    isError: isSendError,
+  } = useSendTransaction();
+  const {
+    isLoading: isConfirming,
+    isSuccess: isConfirmed,
+    error: confirmError,
+    isError: isConfirmError,
+  } = useWaitForTransactionReceipt({
     hash: txHash,
   });
+  const lastStatusKeyRef = useRef<string | null>(null);
+
+  const updateActionStatus = useCallback(
+    async (
+      status: 'prepared' | 'pending_signature' | 'submitted' | 'confirming' | 'confirmed' | 'failed' | 'cancelled',
+      options?: { txHash?: `0x${string}`; errorMessage?: string; metadata?: Record<string, unknown> }
+    ) => {
+      if (!actionId) return;
+
+      const payload: Record<string, unknown> = {
+        actionId,
+        status,
+      };
+
+      if (options?.txHash) {
+        payload.txHash = options.txHash;
+      }
+
+      if (options?.errorMessage) {
+        payload.error = options.errorMessage;
+      }
+
+      if (options?.metadata) {
+        payload.metadata = options.metadata;
+      }
+
+      const statusKey = JSON.stringify(payload);
+      if (lastStatusKeyRef.current === statusKey) {
+        return;
+      }
+
+      lastStatusKeyRef.current = statusKey;
+
+      try {
+        await fetch('/api/mcp/action', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch (error) {
+        console.error('Failed to update action status:', error);
+      }
+    },
+    [actionId]
+  );
 
   useEffect(() => {
     const init = async () => {
@@ -36,6 +92,26 @@ function WalletSignContent({ searchParams }: WalletSignPageProps) {
     };
     init();
   }, [searchParams, isConnected]);
+
+  useEffect(() => {
+    if (actionId && isConnected) {
+      updateActionStatus('pending_signature');
+    }
+  }, [actionId, isConnected, updateActionStatus]);
+
+  const extractErrorMessage = (error: unknown) => {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    if (typeof (error as { shortMessage?: unknown }).shortMessage === 'string') {
+      return (error as { shortMessage: string }).shortMessage;
+    }
+    if (error instanceof Error) return error.message;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  };
 
   const fetchTransactionData = async (id: string) => {
     try {
@@ -74,13 +150,41 @@ function WalletSignContent({ searchParams }: WalletSignPageProps) {
   };
 
   useEffect(() => {
+    if (txHash) {
+      updateActionStatus('submitted', { txHash });
+    }
+  }, [txHash, updateActionStatus]);
+
+  useEffect(() => {
+    if (txHash && isConfirming) {
+      updateActionStatus('confirming', { txHash });
+    }
+  }, [isConfirming, txHash, updateActionStatus]);
+
+  useEffect(() => {
     if (isConfirmed && txHash) {
+      updateActionStatus('confirmed', { txHash });
       alert(`Transaction successful! 🎉\n\nTransaction Hash: ${txHash}\nStatus: Confirmed`);
       setTimeout(() => {
         window.location.href = '/';
       }, 3000);
     }
   }, [isConfirmed, txHash]);
+
+  useEffect(() => {
+    if (isSendError && sendError) {
+      updateActionStatus('failed', { errorMessage: extractErrorMessage(sendError) });
+    }
+  }, [isSendError, sendError, updateActionStatus]);
+
+  useEffect(() => {
+    if (isConfirmError && confirmError) {
+      updateActionStatus('failed', {
+        txHash: txHash ?? undefined,
+        errorMessage: extractErrorMessage(confirmError),
+      });
+    }
+  }, [isConfirmError, confirmError, txHash, updateActionStatus]);
 
   if (!isConnected) {
     return (

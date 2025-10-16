@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     });
 
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     return response;
@@ -62,6 +62,14 @@ const actionSchema = z.object({
   network: z.enum(['ethereum', 'arbitrum', 'polygon']),
   slippage: z.string().optional().default('0.5'),
   deadline: z.number().optional(),
+});
+
+const statusUpdateSchema = z.object({
+  actionId: z.string().min(1, 'actionId is required'),
+  status: z.enum(['prepared', 'pending_signature', 'submitted', 'confirming', 'confirmed', 'failed', 'cancelled']),
+  txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, 'Invalid transaction hash').optional(),
+  error: z.string().optional(),
+  metadata: z.record(z.any()).optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -163,6 +171,8 @@ export async function POST(request: NextRequest) {
     const actionId = `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Store action data for wallet pages
+    const timestamp = new Date().toISOString();
+
     const actionData = {
       actionId,
       operation,
@@ -181,7 +191,15 @@ export async function POST(request: NextRequest) {
         estimatedTime: '2-5 minutes',
         riskLevel: getRiskLevel(operation, platform)
       },
-      createdAt: new Date().toISOString()
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      txHash: null,
+      history: [
+        {
+          status: 'prepared',
+          timestamp
+        }
+      ]
     };
 
     // Store in temporary store (in production, use database)
@@ -217,7 +235,7 @@ export async function POST(request: NextRequest) {
     });
 
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     return response;
@@ -237,12 +255,98 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const validation = statusUpdateSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request parameters', details: validation.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { actionId, status, txHash, error, metadata } = validation.data;
+
+    (global as any).actionStore = (global as any).actionStore || new Map();
+    const actionStore: Map<string, any> = (global as any).actionStore;
+    const actionData = actionStore.get(actionId);
+
+    if (!actionData) {
+      return NextResponse.json(
+        { success: false, error: 'Action not found or expired' },
+        { status: 404 }
+      );
+    }
+
+    const timestamp = new Date().toISOString();
+
+    actionData.status = status;
+    actionData.updatedAt = timestamp;
+
+    if (typeof txHash !== 'undefined') {
+      actionData.txHash = txHash;
+    }
+
+    if (error) {
+      actionData.error = error;
+    } else {
+      delete actionData.error;
+    }
+
+    if (metadata) {
+      actionData.statusMetadata = metadata;
+    } else {
+      delete actionData.statusMetadata;
+    }
+
+    actionData.history = [
+      ...(actionData.history || []),
+      {
+        status,
+        timestamp,
+        txHash: txHash ?? null,
+        error: error ?? null,
+        metadata: metadata ?? null
+      }
+    ];
+
+    actionStore.set(actionId, actionData);
+
+    const response = NextResponse.json({
+      success: true,
+      data: actionData,
+      timestamp
+    });
+
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
+
+  } catch (error) {
+    console.error('PATCH Action API Error:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to update action status',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PATCH, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });

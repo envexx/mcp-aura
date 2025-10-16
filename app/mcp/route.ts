@@ -83,6 +83,63 @@ const handler = createMcpHandler(async (server) => {
     })
   );
 
+  // Action Status Tool
+  server.registerTool(
+    "get_action_status",
+    {
+      title: "Get Action Status",
+      description: "Retrieve the latest status of a prepared DeFi action, including transaction hash and history.",
+      inputSchema: {
+        actionId: z.string().describe("Action identifier returned by execute_action"),
+      },
+    },
+    async ({ actionId }: { actionId: string }) => {
+      (global as any).actionStore = (global as any).actionStore || new Map();
+      const actionStore: Map<string, any> = (global as any).actionStore;
+      const actionData = actionStore.get(actionId);
+
+      if (!actionData) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `No action found for ID ${actionId}. It may have expired or never existed.`,
+            },
+          ],
+          isError: true,
+        };
+      }
+
+      const statusSummary = [`Status: ${actionData.status}`, `Updated: ${actionData.updatedAt}`];
+
+      if (actionData.txHash) {
+        statusSummary.push(`Transaction Hash: ${actionData.txHash}`);
+      }
+
+      if (actionData.error) {
+        statusSummary.push(`Error: ${actionData.error}`);
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: statusSummary.join("\n"),
+          },
+        ],
+        structuredContent: {
+          actionId,
+          status: actionData.status,
+          txHash: actionData.txHash,
+          error: actionData.error ?? null,
+          metadata: actionData.statusMetadata ?? null,
+          history: actionData.history ?? [],
+          updatedAt: actionData.updatedAt,
+        },
+      };
+    }
+  );
+
   // Register Strategy Resource
   server.registerResource(
     "strategy-widget",

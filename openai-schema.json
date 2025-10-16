@@ -60,6 +60,33 @@
             }
           }
         }
+      },
+      "patch": {
+        "summary": "Update DeFi Action Status",
+        "description": "Update the status of a previously prepared DeFi action (e.g., after wallet signing)",
+        "operationId": "updateDeFiActionStatus",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated action status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionStatus"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/mcp/portfolio": {
@@ -628,6 +655,108 @@
             "format": "date-time",
             "description": "Response timestamp",
             "example": "2023-10-18T10:30:00.000Z"
+          }
+        }
+      },
+      "ActionStatusUpdate": {
+        "type": "object",
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "description": "Identifier of the action to update",
+            "example": "action_1634567890123_abc123def"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "prepared",
+              "pending_signature",
+              "submitted",
+              "confirming",
+              "confirmed",
+              "failed",
+              "cancelled"
+            ],
+            "description": "New status for the action",
+            "example": "confirmed"
+          },
+          "txHash": {
+            "type": "string",
+            "description": "Transaction hash if available",
+            "example": "0xabc123"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if the action failed"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata about the status update",
+            "additionalProperties": true
+          }
+        },
+        "required": ["actionId", "status"]
+      },
+      "ActionStatus": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "actionId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "txHash": {
+                "type": ["string", "null"]
+              },
+              "error": {
+                "type": ["string", "null"]
+              },
+              "metadata": {
+                "type": ["object", "null"],
+                "additionalProperties": true
+              },
+              "history": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "txHash": {
+                      "type": ["string", "null"]
+                    },
+                    "error": {
+                      "type": ["string", "null"]
+                    },
+                    "metadata": {
+                      "type": ["object", "null"],
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
