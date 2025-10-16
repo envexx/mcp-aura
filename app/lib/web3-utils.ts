@@ -391,7 +391,7 @@ export const NETWORKS = {
   ethereum: {
     chainId: 1,
     name: 'Ethereum',
-    rpcUrl: 'https://cloudflare-eth.com', // Public Cloudflare Ethereum RPC
+    rpcUrl: 'https://mainnet.infura.io/v3/26a079c2ead849ab9681d56428dbbb71', // Infura API key
     explorerUrl: 'https://etherscan.io',
     swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
     weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
