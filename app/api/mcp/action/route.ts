@@ -2,6 +2,56 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWeb3Utils } from '@/app/lib/web3-utils';
 import { z } from 'zod';
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const actionId = searchParams.get('actionId');
+
+    if (!actionId) {
+      return NextResponse.json(
+        { error: 'actionId parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    // Get action data from temporary store
+    const actionStore = (global as any).actionStore || new Map();
+    const actionData = actionStore.get(actionId);
+
+    if (!actionData) {
+      return NextResponse.json(
+        { error: 'Action not found or expired' },
+        { status: 404 }
+      );
+    }
+
+    const response = NextResponse.json({
+      success: true,
+      data: actionData,
+      timestamp: new Date().toISOString()
+    });
+
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
+
+  } catch (error) {
+    console.error('GET Action API Error:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to retrieve action',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      },
+      { status: 500 }
+    );
+  }
+}
+
 const actionSchema = z.object({
   fromAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid Ethereum address'),
   operation: z.enum(['swap', 'stake', 'bridge']),
@@ -149,8 +199,10 @@ export async function POST(request: NextRequest) {
         estimatedFees,
         status: 'prepared',
         requiresSignature: true,
-        walletConnectionUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/connect.html?actionId=${actionId}`,
-        signingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/sign.html?actionId=${actionId}`,
+        walletConnectionUrl: `${process.env.NODE_ENV === 'development' ?
+          'http://localhost:3000' :
+          (process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app')
+        }/wallet?action=swap&fromToken=${encodeURIComponent(tokenIn)}&toToken=${encodeURIComponent(tokenOut)}&amount=${encodeURIComponent(amountIn)}&nonce=${encodeURIComponent(actionId)}`,
         metadata: {
           tokenIn,
           tokenOut,
@@ -190,7 +242,7 @@ export async function OPTIONS(request: NextRequest) {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });

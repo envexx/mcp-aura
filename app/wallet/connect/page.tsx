@@ -1,122 +1,131 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useAccount } from 'wagmi';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
 
 interface WalletConnectPageProps {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 function WalletConnectContent({ searchParams }: WalletConnectPageProps) {
-  const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
+  const { address, isConnected } = useAccount();
   const [actionId, setActionId] = useState<string>('');
+  const { openConnectModal } = useConnectModal();
 
   useEffect(() => {
-    const id = typeof searchParams.actionId === 'string' ? searchParams.actionId : '';
-    setActionId(id);
+    const init = async () => {
+      const params = await searchParams;
+      const id = typeof params.actionId === 'string' ? params.actionId : '';
+      setActionId(id);
+    };
+    init();
   }, [searchParams]);
 
-  const connectWallet = async (walletType: string) => {
-    setConnectingWallet(walletType);
-    try {
-      // This would integrate with actual wallet connection libraries
-      console.log(`Connecting to ${walletType}...`);
+  useEffect(() => {
+    if (isConnected && address) {
+      // Store connection info
+      localStorage.setItem('wallet_connected', 'true');
+      localStorage.setItem('wallet_address', address);
 
-      // Simulate connection delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Success message
+      alert(`Successfully connected to wallet! Address: ${address}`);
 
-      // For demo purposes, redirect to signing page
-      if (actionId) {
-        window.location.href = `/wallet/sign?actionId=${actionId}`;
-      }
-    } catch (error) {
-      console.error('Wallet connection failed:', error);
-      setConnectingWallet(null);
+      // Redirect to signing page after 2 seconds
+      setTimeout(() => {
+        if (actionId && actionId !== 'unknown') {
+          window.location.href = `/wallet/sign?actionId=${actionId}`;
+        }
+      }, 2000);
     }
-  };
+  }, [isConnected, address, actionId]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+        <div className="max-w-md mx-auto bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/20 p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              🔗 Connect Your Wallet
+            <div className="w-16 h-16 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              🔗 Connect Wallet
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-300">
               Connect your wallet to sign DeFi transactions securely
             </p>
           </div>
 
-          <div className="space-y-4">
-            <button
-              onClick={() => connectWallet('metamask')}
-              disabled={connectingWallet !== null}
-              className="w-full flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 text-white rounded-lg font-medium transition-colors"
-            >
-              {connectingWallet === 'metamask' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <img src="/metamask-icon.svg" alt="MetaMask" className="w-6 h-6 mr-3" />
-                  Connect MetaMask
-                </>
-              )}
-            </button>
+          {isConnected ? (
+            <div className="space-y-6">
+              <div className="bg-emerald-500/20 border border-emerald-400/30 rounded-xl p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-emerald-400 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-lg font-semibold text-emerald-300">Wallet Connected</p>
+                    <p className="text-sm text-emerald-200 font-mono break-all mt-1">{address}</p>
+                  </div>
+                </div>
+              </div>
 
-            <button
-              onClick={() => connectWallet('walletconnect')}
-              disabled={connectingWallet !== null}
-              className="w-full flex items-center justify-center px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
-            >
-              {connectingWallet === 'walletconnect' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <img src="/walletconnect-icon.svg" alt="WalletConnect" className="w-6 h-6 mr-3" />
-                  WalletConnect
-                </>
-              )}
-            </button>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('wallet_connected');
+                  localStorage.removeItem('wallet_address');
+                  window.location.reload();
+                }}
+                className="w-full flex items-center justify-center px-6 py-4 bg-red-500/80 hover:bg-red-500 text-white rounded-xl font-semibold transition-all duration-200 backdrop-blur-sm border border-red-400/30"
+              >
+                Disconnect Wallet
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex justify-center">
+                <button
+                  onClick={() => openConnectModal?.()}
+                  className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-emerald-500/25"
+                >
+                  🌟 Connect Wallet
+                </button>
+              </div>
 
-            <button
-              onClick={() => connectWallet('coinbase')}
-              disabled={connectingWallet !== null}
-              className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors"
-            >
-              {connectingWallet === 'coinbase' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <img src="/coinbase-icon.svg" alt="Coinbase Wallet" className="w-6 h-6 mr-3" />
-                  Coinbase Wallet
-                </>
-              )}
-            </button>
+              <div className="text-center space-y-2">
+                <p className="text-sm text-gray-300">
+                  Choose your preferred wallet to continue with the transaction
+                </p>
+                <div className="flex justify-center space-x-4 mt-4">
+                  <div className="flex items-center space-x-2 text-xs text-gray-400">
+                    <div className="w-6 h-6 bg-orange-500 rounded"></div>
+                    <span>MetaMask</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs text-gray-400">
+                    <div className="w-6 h-6 bg-blue-500 rounded"></div>
+                    <span>Coinbase</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs text-gray-400">
+                    <div className="w-6 h-6 bg-purple-500 rounded"></div>
+                    <span>WalletConnect</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-            <button
-              onClick={() => connectWallet('ledger')}
-              disabled={connectingWallet !== null}
-              className="w-full flex items-center justify-center px-4 py-3 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white rounded-lg font-medium transition-colors"
-            >
-              {connectingWallet === 'ledger' ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <img src="/ledger-icon.svg" alt="Ledger" className="w-6 h-6 mr-3" />
-                  Ledger
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-medium text-gray-900 mb-2">Action ID</h3>
-            <p className="text-sm text-gray-600 font-mono break-all">{actionId}</p>
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-500">
-              Secure connection powered by ENVXX MCP AURA
+          <div className="mt-8 text-center">
+            <p className="text-xs text-gray-400">
+              Action ID: <span className="font-mono text-emerald-300">{actionId}</span>
+            </p>
+            <p className="text-xs text-gray-400 mt-2">
+              Secure connection powered by AppKit & ENVXX MCP AURA
             </p>
           </div>
         </div>

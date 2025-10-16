@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connect Wallet - ENVXX MCP AURA</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@coinbase/wallet-sdk@4.0.4/dist/index.umd.js"></script>
     <style>
         .spinner {
             border: 2px solid #f3f3f3;
@@ -43,15 +45,6 @@
                         </span>
                     </button>
 
-                    <button onclick="connectWallet('walletconnect')"
-                            id="walletconnect-btn"
-                            class="w-full flex items-center justify-center px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
-                        <span id="walletconnect-text">
-                            <img src="https://walletconnect.com/images/walletconnect-logo.png" alt="WalletConnect" class="w-6 h-6 mr-3 inline" style="filter: brightness(0) invert(1);" />
-                            WalletConnect
-                        </span>
-                    </button>
-
                     <button onclick="connectWallet('coinbase')"
                             id="coinbase-btn"
                             class="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
@@ -60,14 +53,24 @@
                             Coinbase Wallet
                         </span>
                     </button>
+
+                    <button onclick="connectWallet('walletconnect')"
+                            id="walletconnect-btn"
+                            class="w-full flex items-center justify-center px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                        <span id="walletconnect-text">
+                            <img src="https://walletconnect.com/images/walletconnect-logo.png" alt="WalletConnect" class="w-6 h-6 mr-3 inline" style="filter: brightness(0) invert(1);" />
+                            WalletConnect
+                        </span>
+                    </button>
                 </div>
 
-                <div class="mt-8 p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-medium text-gray-900 mb-2">Action ID</h3>
-                    <p id="action-id" class="text-sm text-gray-600 font-mono break-all">Loading...</p>
+                <div id="account-info" class="mt-6 p-4 bg-green-50 rounded-lg hidden">
+                    <h3 class="font-medium text-green-900 mb-2">Connected Account</h3>
+                    <p id="account-address" class="text-sm text-green-700 font-mono break-all"></p>
+                    <p id="account-balance" class="text-sm text-green-600 mt-1"></p>
                 </div>
 
-                <div class="mt-4 text-center">
+                <div class="mt-6 text-center">
                     <p class="text-sm text-gray-500">
                         Secure connection powered by ENVXX MCP AURA
                     </p>
@@ -81,8 +84,21 @@
         const urlParams = new URLSearchParams(window.location.search);
         const actionId = urlParams.get('actionId') || 'unknown';
 
-        // Display action ID
-        document.getElementById('action-id').textContent = actionId;
+        let provider;
+        let signer;
+        let connectedWallet = null;
+
+        // Initialize Coinbase Wallet SDK
+        let coinbaseWalletSDK;
+        try {
+            coinbaseWalletSDK = new CoinbaseWalletSDK({
+                appName: 'ENVXX MCP AURA',
+                appLogoUrl: 'https://mcp-aura.vercel.app/favicon.ico',
+                darkMode: false
+            });
+        } catch (error) {
+            console.warn('Coinbase Wallet SDK not available:', error);
+        }
 
         async function connectWallet(walletType) {
             // Disable all buttons
@@ -96,26 +112,76 @@
             document.getElementById(buttonTextId).innerHTML = '<div class="spinner mr-3"></div> Connecting...';
 
             try {
-                console.log(`Connecting to ${walletType}...`);
+                let accounts = [];
+                let balance = '0';
 
-                // Simulate connection delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                switch (walletType) {
+                    case 'metamask':
+                        if (typeof window.ethereum !== 'undefined') {
+                            // Request account access
+                            accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
 
-                // For demo purposes, redirect to signing page
-                if (actionId && actionId !== 'unknown') {
-                    window.location.href = `/wallet/sign.html?actionId=${actionId}`;
-                } else {
-                    alert('No action ID found. Please go back and try again.');
-                    // Re-enable buttons
-                    buttons.forEach(btnId => {
-                        document.getElementById(btnId).disabled = false;
-                    });
-                    // Reset button text
-                    document.getElementById(buttonTextId).innerHTML = getButtonText(walletType);
+                            // Create ethers provider
+                            provider = new ethers.providers.Web3Provider(window.ethereum);
+                            signer = provider.getSigner();
+
+                            // Get balance
+                            const balanceWei = await provider.getBalance(accounts[0]);
+                            balance = ethers.utils.formatEther(balanceWei);
+
+                        } else {
+                            throw new Error('MetaMask not installed. Please install MetaMask extension.');
+                        }
+                        break;
+
+                    case 'coinbase':
+                        if (coinbaseWalletSDK) {
+                            const coinbaseProvider = coinbaseWalletSDK.makeWeb3Provider('https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', 1);
+                            accounts = await coinbaseProvider.request({ method: 'eth_requestAccounts' });
+                            provider = new ethers.providers.Web3Provider(coinbaseProvider);
+                            signer = provider.getSigner();
+
+                            const balanceWei = await provider.getBalance(accounts[0]);
+                            balance = ethers.utils.formatEther(balanceWei);
+                        } else {
+                            throw new Error('Coinbase Wallet not available');
+                        }
+                        break;
+
+                    case 'walletconnect':
+                        // WalletConnect would need more setup, for now show message
+                        throw new Error('WalletConnect integration coming soon');
+                        break;
+
+                    default:
+                        throw new Error('Unsupported wallet type');
                 }
+
+                connectedWallet = walletType;
+
+                // Show connected account info
+                document.getElementById('account-info').classList.remove('hidden');
+                document.getElementById('account-address').textContent = accounts[0];
+                document.getElementById('account-balance').textContent = `Balance: ${parseFloat(balance).toFixed(4)} ETH`;
+
+                // Store connection info for next page
+                localStorage.setItem('wallet_connected', 'true');
+                localStorage.setItem('wallet_type', walletType);
+                localStorage.setItem('wallet_address', accounts[0]);
+
+                // Success message
+                alert(`Successfully connected to ${walletType.toUpperCase()}! 🎉`);
+
+                // Redirect to signing page after 2 seconds
+                setTimeout(() => {
+                    if (actionId && actionId !== 'unknown') {
+                        window.location.href = `/wallet/sign.html?actionId=${actionId}`;
+                    }
+                }, 2000);
+
             } catch (error) {
                 console.error('Wallet connection failed:', error);
-                alert('Wallet connection failed. Please try again.');
+                alert(`Wallet connection failed: ${error.message}`);
 
                 // Re-enable buttons
                 buttons.forEach(btnId => {
@@ -134,6 +200,21 @@
             };
             return texts[walletType] || walletType;
         }
+
+        // Check if already connected
+        window.onload = function() {
+            const isConnected = localStorage.getItem('wallet_connected');
+            if (isConnected) {
+                const walletType = localStorage.getItem('wallet_type');
+                const address = localStorage.getItem('wallet_address');
+
+                if (address) {
+                    document.getElementById('account-info').classList.remove('hidden');
+                    document.getElementById('account-address').textContent = address;
+                    document.getElementById('account-balance').textContent = 'Balance: Loading...';
+                }
+            }
+        };
     </script>
 </body>
 </html>

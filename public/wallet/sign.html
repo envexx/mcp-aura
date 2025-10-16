@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Transaction - ENVXX MCP AURA</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@coinbase/wallet-sdk@4.0.4/dist/index.umd.js"></script>
     <style>
         .spinner {
             border: 2px solid #f3f3f3;
@@ -26,51 +28,59 @@
             <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6">
                 <div class="text-center mb-8">
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">
-                        ✍️ Sign Your Transaction
+                        Sign Your Transaction
                     </h1>
                     <p class="text-gray-600">
                         Review and sign your DeFi transaction securely
                     </p>
                 </div>
 
+                <!-- Connected Wallet Info -->
+                <div id="wallet-info" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <img id="wallet-icon" src="https://metamask.io/images/metamask-logo.png" alt="Wallet" class="h-8 w-8 rounded-full">
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-blue-900" id="wallet-name">Wallet Connected</p>
+                            <p class="text-sm text-blue-700 font-mono" id="connected-address">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Transaction Details -->
-                <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                <div id="transaction-details" class="bg-gray-50 rounded-lg p-6 mb-6">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h2>
 
                     <div class="space-y-3">
                         <div class="flex justify-between">
                             <span class="text-gray-600">Action:</span>
-                            <span class="font-medium">Token Swap</span>
+                            <span class="font-medium" id="tx-action">Loading...</span>
                         </div>
 
                         <div class="flex justify-between">
                             <span class="text-gray-600">From:</span>
-                            <span class="font-medium">0.01 ETH</span>
+                            <span class="font-medium" id="tx-from">Loading...</span>
                         </div>
 
                         <div class="flex justify-between">
                             <span class="text-gray-600">To:</span>
-                            <span class="font-medium">USDT (estimated)</span>
+                            <span class="font-medium" id="tx-to">Loading...</span>
                         </div>
 
                         <div class="flex justify-between">
                             <span class="text-gray-600">Network:</span>
-                            <span class="font-medium">Ethereum</span>
+                            <span class="font-medium" id="tx-network">Loading...</span>
                         </div>
 
                         <div class="flex justify-between">
                             <span class="text-gray-600">Platform:</span>
-                            <span class="font-medium">Uniswap V3</span>
-                        </div>
-
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">Slippage:</span>
-                            <span class="font-medium">0.5%</span>
+                            <span class="font-medium" id="tx-platform">Loading...</span>
                         </div>
 
                         <div class="flex justify-between">
                             <span class="text-gray-600">Estimated Gas:</span>
-                            <span class="font-medium">~0.004 ETH ($8.50)</span>
+                            <span class="font-medium" id="tx-gas">Loading...</span>
                         </div>
                     </div>
                 </div>
@@ -85,7 +95,7 @@
                         </div>
                         <div class="ml-3">
                             <h3 class="text-sm font-medium text-blue-800">Verified Contract</h3>
-                            <p class="text-sm text-blue-700 font-mono text-xs mt-1">
+                            <p class="text-sm text-blue-700 font-mono text-xs mt-1" id="contract-address">
                                 0xE592427A0AEce92De3Edee1F18E0157C05861564
                             </p>
                             <p class="text-xs text-blue-600 mt-1">
@@ -131,10 +141,120 @@
         const urlParams = new URLSearchParams(window.location.search);
         const actionId = urlParams.get('actionId') || 'unknown';
 
+        let provider;
+        let signer;
+        let transactionData = null;
+        let actionData = null;
+
         // Display action ID
         document.getElementById('action-id').textContent = actionId;
 
+        // Initialize wallet connection from localStorage
+        async function initializeWallet() {
+            const isConnected = localStorage.getItem('wallet_connected');
+            const walletType = localStorage.getItem('wallet_type');
+            const walletAddress = localStorage.getItem('wallet_address');
+
+            if (!isConnected || !walletType || !walletAddress) {
+                alert('No wallet connected. Please connect your wallet first.');
+                window.location.href = '/wallet/connect.html';
+                return;
+            }
+
+            try {
+                // Initialize provider based on wallet type
+                switch (walletType) {
+                    case 'metamask':
+                        if (typeof window.ethereum !== 'undefined') {
+                            provider = new ethers.providers.Web3Provider(window.ethereum);
+                            signer = provider.getSigner();
+                        } else {
+                            throw new Error('MetaMask not available');
+                        }
+                        break;
+
+                    case 'coinbase':
+                        const coinbaseWalletSDK = new CoinbaseWalletSDK({
+                            appName: 'ENVXX MCP AURA',
+                            appLogoUrl: 'https://mcp-aura.vercel.app/favicon.ico',
+                            darkMode: false
+                        });
+                        const coinbaseProvider = coinbaseWalletSDK.makeWeb3Provider('https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', 1);
+                        provider = new ethers.providers.Web3Provider(coinbaseProvider);
+                        signer = provider.getSigner();
+                        break;
+
+                    default:
+                        throw new Error('Unsupported wallet type');
+                }
+
+                // Update wallet info display
+                document.getElementById('wallet-name').textContent = walletType.charAt(0).toUpperCase() + walletType.slice(1);
+                document.getElementById('connected-address').textContent = walletAddress;
+
+                // Set wallet icon
+                const iconUrls = {
+                    metamask: 'https://metamask.io/images/metamask-logo.png',
+                    coinbase: 'https://www.coinbase.com/img/coinbase-wallet-logo.png',
+                    walletconnect: 'https://walletconnect.com/images/walletconnect-logo.png'
+                };
+                document.getElementById('wallet-icon').src = iconUrls[walletType] || iconUrls.metamask;
+
+                // Fetch transaction data from API
+                await fetchTransactionData();
+
+            } catch (error) {
+                console.error('Wallet initialization failed:', error);
+                alert('Failed to initialize wallet: ' + error.message);
+                window.location.href = '/wallet/connect.html';
+            }
+        }
+
+        // Fetch transaction data from API
+        async function fetchTransactionData() {
+            try {
+                const baseUrl = window.location.origin;
+                const response = await fetch(`${baseUrl}/api/mcp/action?actionId=${actionId}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch transaction data');
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    actionData = data.data;
+                    transactionData = data.data.transactionRequest;
+
+                    // Update UI with transaction details
+                    updateTransactionDisplay(data.data);
+                } else {
+                    throw new Error('Invalid transaction data received');
+                }
+
+            } catch (error) {
+                console.error('Failed to fetch transaction data:', error);
+                alert('Failed to load transaction data: ' + error.message);
+            }
+        }
+
+        // Update transaction details in UI
+        function updateTransactionDisplay(data) {
+            document.getElementById('tx-action').textContent = data.operation || 'Unknown';
+            document.getElementById('tx-from').textContent = data.metadata?.tokenIn + ' ' + data.metadata?.amountIn || 'Unknown';
+            document.getElementById('tx-to').textContent = data.metadata?.tokenOut + ' (estimated)' || 'Unknown';
+            document.getElementById('tx-network').textContent = data.network || 'Ethereum';
+            document.getElementById('tx-platform').textContent = data.platform || 'Unknown';
+            document.getElementById('tx-gas').textContent = data.estimatedFees?.totalFeeUSD ?
+                `$${data.estimatedFees.totalFeeUSD}` : '~$8.50';
+        }
+
         async function signTransaction() {
+            if (!transactionData || !signer) {
+                alert('Transaction data not loaded or wallet not connected');
+                return;
+            }
+
             // Disable button
             document.getElementById('sign-btn').disabled = true;
 
@@ -142,24 +262,48 @@
             document.getElementById('sign-text').innerHTML = '<div class="spinner mr-2"></div> Signing Transaction...';
 
             try {
-                console.log('Signing transaction...');
+                console.log('Signing transaction:', transactionData);
 
-                // Simulate signing delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Send transaction using ethers signer
+                const txResponse = await signer.sendTransaction({
+                    to: transactionData.to,
+                    data: transactionData.data,
+                    value: transactionData.value || '0x0',
+                    gasLimit: ethers.utils.hexlify(300000), // Reasonable gas limit
+                });
 
-                // Show success
-                alert('Transaction signed and broadcast successfully! 🎉');
+                console.log('Transaction sent:', txResponse.hash);
 
-                // Redirect back to the chat or success page
-                window.location.href = '/';
+                // Wait for confirmation
+                document.getElementById('sign-text').innerHTML = '<div class="spinner mr-2"></div> Broadcasting...';
+
+                const receipt = await txResponse.wait();
+                console.log('Transaction confirmed:', receipt);
+
+                // Success!
+                alert(`Transaction successful! \n\nTransaction Hash: ${txResponse.hash}\nBlock Number: ${receipt.blockNumber}`);
+
+                // Redirect to success page or back to chat
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
 
             } catch (error) {
-                console.error('Signing failed:', error);
-                alert('Signing failed. Please try again.');
+                console.error('Transaction failed:', error);
+
+                let errorMessage = 'Transaction failed';
+                if (error.code === 4001) {
+                    errorMessage = 'Transaction rejected by user';
+                } else if (error.code === -32000) {
+                    errorMessage = 'Insufficient funds for transaction';
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                alert(`Transaction failed: ${errorMessage}`);
 
                 // Re-enable button
                 document.getElementById('sign-btn').disabled = false;
-                // Reset button text
                 document.getElementById('sign-text').innerHTML = `
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -168,6 +312,11 @@
                 `;
             }
         }
+
+        // Initialize when page loads
+        window.onload = function() {
+            initializeWallet();
+        };
     </script>
 </body>
 </html>
