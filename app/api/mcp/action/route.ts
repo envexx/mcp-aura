@@ -158,10 +158,12 @@ export async function OPTIONS(request: NextRequest) {
 
 // Helper functions
 function normalizePayload(payload: Record<string, unknown>) {
-  const rawNetwork = typeof payload.network === 'string' ? payload.network : undefined;
+  const rawNetwork = typeof payload.network === 'string' ? payload.network :
+                    typeof payload.chain === 'string' ? payload.chain : undefined;
   const normalizedNetwork = rawNetwork ? normalizeNetwork(rawNetwork) : undefined;
 
-  const rawSlippage = typeof payload.slippage === 'string' ? payload.slippage : undefined;
+  const rawSlippage = typeof payload.slippage === 'string' ? payload.slippage :
+                     typeof payload.slippage === 'number' ? payload.slippage.toString() : undefined;
   const normalizedSlippage = rawSlippage ? rawSlippage.replace('%', '').trim() : undefined;
 
   const platform = typeof payload.platform === 'string' && payload.platform.trim().length > 0
@@ -170,19 +172,33 @@ function normalizePayload(payload: Record<string, unknown>) {
 
   const operation = typeof payload.operation === 'string'
     ? payload.operation.trim().toLowerCase()
-    : payload.operation;
+    : typeof payload.action === 'string'
+      ? payload.action.trim().toLowerCase()
+      : payload.operation;
 
   const amountIn = typeof payload.amountIn === 'number'
     ? payload.amountIn.toString()
     : typeof payload.amountIn === 'string'
       ? normalizeNumericString(payload.amountIn)
-      : payload.amountIn;
+      : typeof payload.amount === 'number'
+        ? payload.amount.toString()
+        : typeof payload.amount === 'string'
+          ? normalizeNumericString(payload.amount)
+          : payload.amountIn;
+
+  const fromAddress = typeof payload.fromAddress === 'string'
+    ? payload.fromAddress.trim()
+    : typeof payload.fromAddress === 'string'
+      ? payload.fromAddress.trim()
+      : process.env.DEFAULT_WALLET_ADDRESS || '0x01C229f4bDb7552b564619554C8a805aE4Ca2ADB'; // Fallback to provided address
 
   return {
     ...payload,
-    fromAddress: typeof payload.fromAddress === 'string' ? payload.fromAddress.trim() : payload.fromAddress,
-    tokenIn: typeof payload.tokenIn === 'string' ? payload.tokenIn.trim() : payload.tokenIn,
-    tokenOut: typeof payload.tokenOut === 'string' ? payload.tokenOut.trim() : payload.tokenOut,
+    fromAddress,
+    tokenIn: typeof payload.tokenIn === 'string' ? payload.tokenIn.trim() :
+             typeof payload.fromToken === 'string' ? payload.fromToken.trim() : payload.tokenIn,
+    tokenOut: typeof payload.tokenOut === 'string' ? payload.tokenOut.trim() :
+              typeof payload.toToken === 'string' ? payload.toToken.trim() : payload.tokenOut,
     amountIn,
     network: normalizedNetwork,
     slippage: normalizedSlippage,

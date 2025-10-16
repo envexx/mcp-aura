@@ -449,9 +449,16 @@
       "DeFiActionRequest": {
         "type": "object",
         "properties": {
+          "fromAddress": {
+            "type": "string",
+            "pattern": "^0x[a-fA-F0-9]{40}$",
+            "description": "Sender wallet address (optional, uses default if not provided)",
+            "example": "0x01C229f4bDb7552b564619554C8a805aE4Ca2ADB"
+          },
           "action": {
             "type": "string",
-            "enum": ["swap", "stake", "unstake", "provide_liquidity", "remove_liquidity"]
+            "enum": ["swap", "stake", "bridge"],
+            "example": "swap"
           },
           "fromToken": {
             "type": "string",
@@ -459,21 +466,24 @@
           },
           "toToken": {
             "type": "string",
-            "example": "USDC"
+            "example": "DAI"
           },
           "amount": {
             "type": "string",
-            "example": "1.0"
+            "example": "0.01"
           },
           "slippage": {
             "type": "number",
-            "example": 0.5
+            "example": 0.5,
+            "description": "Slippage tolerance in percentage"
           },
           "chain": {
             "type": "string",
+            "enum": ["ethereum", "arbitrum", "polygon"],
             "example": "ethereum"
           }
-        }
+        },
+        "required": ["action", "fromToken", "toToken", "amount", "chain"]
       },
       "ActionResult": {
         "type": "object",
