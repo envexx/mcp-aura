@@ -1,6 +1,13 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 
-const AURA_BASE_URL = 'https://aura.adex.network/api';
+// AURA API endpoints - Updated with correct base URL
+const AURA_ENDPOINTS = [
+  'https://aura.adex.network/api',
+  'https://aura.adex.network/v1',
+  'https://aura.adex.network'
+];
+
+const AURA_BASE_URL = AURA_ENDPOINTS[0]; // Default to first endpoint
 
 export interface Token {
   address: string;
@@ -17,6 +24,8 @@ export interface Network {
   chainId: string;
   rpcUrl?: string;
   explorerUrl?: string;
+  platformId?: string;
+  iconUrls?: string[];
 }
 
 export interface Portfolio {
@@ -75,6 +84,8 @@ export class AuraAPI {
   private getHeaders() {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'User-Agent': 'ENVXX-MCP-AURA/1.0.0',
+      'Accept': 'application/json'
     };
     
     if (this.apiKey) {
@@ -84,46 +95,171 @@ export class AuraAPI {
     return headers;
   }
 
-  async getPortfolio(address: string): Promise<Portfolio> {
-    try {
-      const response = await axios.get(
-        `${this.baseURL}/portfolio/balances`,
-        {
-          params: { address },
+  // Try multiple endpoints until one works
+  private async tryMultipleEndpoints(path: string, params: any = {}): Promise<AxiosResponse> {
+    let lastError: any;
+    let lastResponse: AxiosResponse | null = null;
+    
+    for (const endpoint of AURA_ENDPOINTS) {
+      try {
+        console.log(`Trying endpoint: ${endpoint}${path}`);
+        const response = await axios.get(`${endpoint}${path}`, {
+          params,
           headers: this.getHeaders(),
+          timeout: 10000,
+          validateStatus: () => true
+        });
+
+        if (response.status >= 200 && response.status < 400) {
+          console.log(`Success with endpoint: ${endpoint} (Status: ${response.status})`);
+          return response;
         }
-      );
+
+        console.warn(`Endpoint responded with status ${response.status}: ${endpoint}${path}`);
+        lastResponse = response;
+        continue;
+
+      } catch (error: any) {
+        console.log(`Failed endpoint: ${endpoint} - ${error.message}`);
+        lastError = error;
+        continue;
+      }
+    }
+
+    if (lastResponse) {
+      const message = typeof lastResponse.data === 'string'
+        ? lastResponse.data
+        : JSON.stringify(lastResponse.data);
+      throw new Error(`AURA API returned ${lastResponse.status}: ${message}`);
+    }
+
+    throw lastError ?? new Error('All AURA endpoints failed');
+  }
+
+  private transformPortfolioResponse(data: any, address: string): Portfolio {
+    const portfolioEntries = Array.isArray(data?.portfolio) ? data.portfolio : [];
+
+    const networks = portfolioEntries.map((entry: any): Portfolio['networks'][number] => {
+      const tokens: Token[] = Array.isArray(entry?.tokens)
+        ? entry.tokens.map((token: any) => {
+            const balanceValue = Number(token?.balance ?? token?.amount ?? 0);
+            const balanceUSDValue = Number(token?.balanceUSD ?? token?.balance_usd ?? 0);
+
+            return {
+              address: token?.address ?? '',
+              symbol: token?.symbol ?? '',
+              balance: balanceValue.toString(),
+              balanceUSD: balanceUSDValue.toFixed(2),
+              network:
+                entry?.network?.platformId ??
+                entry?.network?.name?.toLowerCase() ??
+                '',
+              decimals: token?.decimals,
+              logoURI: token?.logo ?? token?.logoURI,
+            };
+          })
+        : [];
+
+      const totalValue = tokens.reduce((sum: number, token: Token) => {
+        return sum + Number(token.balanceUSD ?? '0');
+      }, 0);
+
+      return {
+        network: {
+          name: entry?.network?.name ?? 'Unknown Network',
+          chainId: entry?.network?.chainId
+            ? String(entry.network.chainId)
+            : '',
+          rpcUrl: entry?.network?.rpcUrl,
+          explorerUrl: entry?.network?.explorerUrl,
+          platformId: entry?.network?.platformId,
+          iconUrls: entry?.network?.iconUrls,
+        },
+        tokens,
+        totalValueUSD: totalValue.toFixed(2),
+      };
+    });
+
+    const totalValueUSDNumeric = networks.reduce(
+      (sum: number, item: Portfolio['networks'][number]) =>
+        sum + Number(item.totalValueUSD ?? '0'),
+      0
+    );
+
+    return {
+      address: data?.address ?? address,
+      totalValueUSD: totalValueUSDNumeric.toFixed(2),
+      networks,
+    };
+  }
+
+  async getPortfolio(address: string): Promise<Portfolio> {
+    // Validate address format
+    if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      throw new Error('Invalid wallet address format');
+    }
+
+    console.log(`Fetching portfolio for address: ${address}`);
+
+    try {
+      // Try multiple endpoints
+      const params: Record<string, string> = { address };
+      if (this.apiKey) {
+        params.apiKey = this.apiKey;
+      }
+
+      const response = await this.tryMultipleEndpoints('/portfolio/balances', params);
+
+      // Handle different response formats
+      if (response.status === 404) {
+        throw new Error('Portfolio not found for this address');
+      }
 
       // Transform AURA API response to our Portfolio interface
-      const data = response.data;
+      return this.transformPortfolioResponse(response.data, address);
       
-      return {
-        address: data.address || address,
-        totalValueUSD: data.totalValueUSD || '0',
-        networks: data.networks || []
-      };
-    } catch (error) {
-      console.error('Error fetching portfolio:', error);
-      // Return mock data for development
-      return this.getMockPortfolio(address);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Unable to fetch portfolio data from AURA API';
+      throw new Error(message);
     }
   }
 
   async getStrategies(address: string): Promise<StrategyResponse> {
+    // Validate address format
+    if (!address || !address.match(/^0x[a-fA-F0-9]{40}$/)) {
+      throw new Error('Invalid wallet address format');
+    }
+
+    console.log(`Fetching strategies for address: ${address}`);
+
     try {
-      const response = await axios.get(
-        `${this.baseURL}/portfolio/strategies`,
-        {
-          params: { address },
-          headers: this.getHeaders(),
-        }
-      );
+      // Try multiple endpoints
+      const params: Record<string, string> = { address };
+      if (this.apiKey) {
+        params.apiKey = this.apiKey;
+      }
+
+      const response = await this.tryMultipleEndpoints('/portfolio/strategies', params);
+
+      // Handle different response formats
+      if (response.status === 404) {
+        throw new Error('Strategies not found for this address');
+      }
 
       return response.data;
-    } catch (error) {
-      console.error('Error fetching strategies:', error);
-      // Return mock data for development
-      return this.getMockStrategies(address);
+      
+    } catch (error: any) {
+      const rawMessage = error?.response?.data?.message || error?.message || 'Unable to fetch strategies from AURA API';
+      const message = String(rawMessage);
+
+      if (message.includes('AURA API returned 404') || message.includes('Cannot GET /portfolio/strategies')) {
+        console.warn('AURA strategies endpoint is currently unavailable. Returning empty strategy list.');
+        return {
+          strategies: []
+        };
+      }
+
+      throw new Error(message);
     }
   }
 
@@ -172,136 +308,6 @@ export class AuraAPI {
     }
   }
 
-  // Mock data for development and testing
-  private getMockPortfolio(address: string): Portfolio {
-    return {
-      address,
-      totalValueUSD: '2450.75',
-      networks: [
-        {
-          network: {
-            name: 'Arbitrum One',
-            chainId: '42161',
-            rpcUrl: 'https://arb1.arbitrum.io/rpc',
-            explorerUrl: 'https://arbiscan.io'
-          },
-          totalValueUSD: '1200.50',
-          tokens: [
-            {
-              address: '0xA0b86a33E6441c8C5E7b4E9b4B6A8C5E7b4E9b4B',
-              symbol: 'USDC',
-              balance: '1200',
-              balanceUSD: '1200.00',
-              network: 'arbitrum',
-              decimals: 6,
-              logoURI: 'https://assets.coingecko.com/coins/images/6319/small/USD_Coin_icon.png'
-            }
-          ]
-        },
-        {
-          network: {
-            name: 'Ethereum',
-            chainId: '1',
-            rpcUrl: 'https://mainnet.infura.io/v3/YOUR_KEY',
-            explorerUrl: 'https://etherscan.io'
-          },
-          totalValueUSD: '1250.25',
-          tokens: [
-            {
-              address: '0x0000000000000000000000000000000000000000',
-              symbol: 'ETH',
-              balance: '0.5',
-              balanceUSD: '1250.25',
-              network: 'ethereum',
-              decimals: 18,
-              logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png'
-            }
-          ]
-        }
-      ]
-    };
-  }
-
-  private getMockStrategies(address: string): StrategyResponse {
-    return {
-      strategies: [
-        {
-          llm: {
-            provider: 'openai',
-            model: 'gpt-4'
-          },
-          response: [
-            {
-              name: 'Yield Optimization Strategy',
-              risk: 'moderate',
-              expectedYield: '8.5%',
-              timeframe: '30 days',
-              description: 'Optimize your portfolio for maximum yield while maintaining moderate risk exposure.',
-              actions: [
-                {
-                  tokens: 'USDC, USDT',
-                  description: 'Swap 50% of USDC to USDT on Uniswap V3 for better liquidity pool opportunities.',
-                  platforms: [
-                    {
-                      name: 'Uniswap V3',
-                      url: 'https://app.uniswap.org/#/swap'
-                    }
-                  ],
-                  networks: ['arbitrum'],
-                  operations: ['swap'],
-                  apy: '3.5%',
-                  risk: 'low',
-                  estimatedGas: '0.002 ETH',
-                  slippage: '0.5%'
-                },
-                {
-                  tokens: 'USDC, ETH',
-                  description: 'Provide liquidity to USDC/ETH pool on Uniswap V3 for earning fees.',
-                  platforms: [
-                    {
-                      name: 'Uniswap V3',
-                      url: 'https://app.uniswap.org/#/pool'
-                    }
-                  ],
-                  networks: ['arbitrum'],
-                  operations: ['stake', 'liquidity'],
-                  apy: '12.3%',
-                  risk: 'moderate',
-                  estimatedGas: '0.005 ETH',
-                  slippage: '1%'
-                }
-              ]
-            },
-            {
-              name: 'Cross-Chain Arbitrage',
-              risk: 'high',
-              expectedYield: '15.2%',
-              timeframe: '7 days',
-              description: 'Take advantage of price differences across different chains.',
-              actions: [
-                {
-                  tokens: 'ETH',
-                  description: 'Bridge ETH from Ethereum to Arbitrum using Stargate for lower fees.',
-                  platforms: [
-                    {
-                      name: 'Stargate',
-                      url: 'https://stargate.finance'
-                    }
-                  ],
-                  networks: ['ethereum', 'arbitrum'],
-                  operations: ['bridge'],
-                  apy: '0%',
-                  risk: 'low',
-                  estimatedGas: '0.01 ETH',
-                  slippage: '0.1%'
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    };
-  }
 }
 
 export const auraAPI = new AuraAPI(process.env.AURA_API_KEY);

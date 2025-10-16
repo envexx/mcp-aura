@@ -27,8 +27,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(`[MCP][Portfolio] Fetching portfolio for address: ${address}`);
     // Fetch portfolio data from AURA API
     const portfolio = await auraAPI.getPortfolio(address);
+    console.log(`[MCP][Portfolio] Response summary: totalValue=${portfolio.totalValueUSD}, networks=${portfolio.networks.length}`);
 
     // Add CORS headers for MCP compatibility
     const response = NextResponse.json({

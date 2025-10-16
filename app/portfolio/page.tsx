@@ -33,23 +33,33 @@ interface Portfolio {
 export default function PortfolioPage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [address, setAddress] = useState('');
 
   const loadPortfolio = async (walletAddress: string) => {
     if (!walletAddress) return;
     
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`/api/mcp/portfolio?address=${walletAddress}`);
+      console.log('[UI][Portfolio] request', walletAddress);
+      const response = await fetch(`/api/mcp/portfolio?address=${walletAddress}`, {
+        cache: 'no-store'
+      });
       const result = await response.json();
+      console.log('[UI][Portfolio] response', result);
       
       if (result.success) {
         setPortfolio(result.data);
       } else {
-        console.error('Failed to load portfolio:', result.error);
+        console.error('Failed to load portfolio:', result.error || result.message);
+        setError(result.message || result.error || 'Failed to load portfolio');
+        setPortfolio(null);
       }
     } catch (error) {
       console.error('Error loading portfolio:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error loading portfolio');
+      setPortfolio(null);
     } finally {
       setLoading(false);
     }
@@ -64,7 +74,7 @@ export default function PortfolioPage() {
 
   // Load demo portfolio on mount
   useEffect(() => {
-    const demoAddress = '0x742d35Cc6634C0532925a3b8D8C9C8C8C8C8C8C8';
+    const demoAddress = '0x01C229f4bDb7552b564619554C8a805aE4Ca2ADB';
     setAddress(demoAddress);
     loadPortfolio(demoAddress);
   }, []);
@@ -114,6 +124,12 @@ export default function PortfolioPage() {
             </div>
           </form>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-800">
+            {error}
+          </div>
+        )}
 
         {/* Portfolio Overview */}
         {portfolio && (

@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch strategy data from AURA API
+    console.log(`[MCP][Strategy] Fetching strategies for address: ${address}`);
     const strategies = await auraAPI.getStrategies(address);
+    console.log(`[MCP][Strategy] Response summary: strategyGroups=${strategies.strategies?.length ?? 0}`);
 
     // Filter strategies based on risk level if provided
     let filteredStrategies = strategies;
