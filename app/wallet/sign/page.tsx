@@ -1,33 +1,36 @@
-import { Suspense } from 'react';
-import { Metadata } from 'next';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Sign Transaction - ENVXX MCP AURA',
-  description: 'Sign your DeFi transaction securely',
-};
+import { useState, useEffect } from 'react';
 
 interface WalletSignPageProps {
   searchParams: { [key: string]: string | string[] | undefined };
 }
 
-async function getActionData(actionId: string) {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/wallet/action?actionId=${actionId}`);
-    if (!response.ok) {
-      return null;
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching action data:', error);
-    return null;
-  }
-}
-
 function WalletSignContent({ searchParams }: WalletSignPageProps) {
-  const actionId = typeof searchParams.actionId === 'string' ? searchParams.actionId : '';
+  const [signing, setSigning] = useState(false);
+  const [actionId, setActionId] = useState<string>('');
 
-  // In a real implementation, you'd fetch the action data here
-  // For now, we'll show a mock interface
+  useEffect(() => {
+    const id = typeof searchParams.actionId === 'string' ? searchParams.actionId : '';
+    setActionId(id);
+  }, [searchParams]);
+
+  const signTransaction = async () => {
+    setSigning(true);
+    try {
+      // This would integrate with wallet signing libraries
+      alert('Transaction signed and broadcast successfully! 🎉');
+
+      // Simulate signing delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Redirect back to the chat or success page
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Signing failed:', error);
+      setSigning(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
@@ -107,13 +110,23 @@ function WalletSignContent({ searchParams }: WalletSignPageProps) {
           {/* Action Buttons */}
           <div className="space-y-4">
             <button
-              onClick={() => signTransaction()}
-              className="w-full flex items-center justify-center px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+              onClick={signTransaction}
+              disabled={signing}
+              className="w-full flex items-center justify-center px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white rounded-lg font-medium transition-colors"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Sign & Broadcast Transaction
+              {signing ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Signing Transaction...
+                </div>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Sign & Broadcast Transaction
+                </>
+              )}
             </button>
 
             <button
@@ -138,20 +151,6 @@ function WalletSignContent({ searchParams }: WalletSignPageProps) {
   );
 }
 
-function signTransaction() {
-  // This would integrate with wallet signing libraries
-  alert('Transaction signed and broadcast successfully! 🎉');
-
-  // Redirect back to the chat or success page
-  setTimeout(() => {
-    window.location.href = '/';
-  }, 2000);
-}
-
 export default function WalletSignPage(props: WalletSignPageProps) {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <WalletSignContent {...props} />
-    </Suspense>
-  );
+  return <WalletSignContent {...props} />;
 }

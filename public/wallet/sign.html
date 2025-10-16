@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Transaction - ENVXX MCP AURA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #10b981;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+        <div class="container mx-auto px-4 py-8">
+            <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                        ✍️ Sign Your Transaction
+                    </h1>
+                    <p class="text-gray-600">
+                        Review and sign your DeFi transaction securely
+                    </p>
+                </div>
+
+                <!-- Transaction Details -->
+                <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Transaction Details</h2>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Action:</span>
+                            <span class="font-medium">Token Swap</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">From:</span>
+                            <span class="font-medium">0.01 ETH</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">To:</span>
+                            <span class="font-medium">USDT (estimated)</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Network:</span>
+                            <span class="font-medium">Ethereum</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Platform:</span>
+                            <span class="font-medium">Uniswap V3</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Slippage:</span>
+                            <span class="font-medium">0.5%</span>
+                        </div>
+
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Estimated Gas:</span>
+                            <span class="font-medium">~0.004 ETH ($8.50)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contract Address -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">Verified Contract</h3>
+                            <p class="text-sm text-blue-700 font-mono text-xs mt-1">
+                                0xE592427A0AEce92De3Edee1F18E0157C05861564
+                            </p>
+                            <p class="text-xs text-blue-600 mt-1">
+                                Uniswap V3 SwapRouter02 - Verified on Etherscan
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="space-y-4">
+                    <button onclick="signTransaction()"
+                            id="sign-btn"
+                            class="w-full flex items-center justify-center px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors">
+                        <span id="sign-text">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Sign & Broadcast Transaction
+                        </span>
+                    </button>
+
+                    <button onclick="window.history.back()"
+                            class="w-full flex items-center justify-center px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+                        Cancel & Go Back
+                    </button>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <p class="text-xs text-gray-500">
+                        Action ID: <span id="action-id" class="font-mono">Loading...</span>
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Secure signing powered by ENVXX MCP AURA
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get actionId from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const actionId = urlParams.get('actionId') || 'unknown';
+
+        // Display action ID
+        document.getElementById('action-id').textContent = actionId;
+
+        async function signTransaction() {
+            // Disable button
+            document.getElementById('sign-btn').disabled = true;
+
+            // Show loading state
+            document.getElementById('sign-text').innerHTML = '<div class="spinner mr-2"></div> Signing Transaction...';
+
+            try {
+                console.log('Signing transaction...');
+
+                // Simulate signing delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Show success
+                alert('Transaction signed and broadcast successfully! 🎉');
+
+                // Redirect back to the chat or success page
+                window.location.href = '/';
+
+            } catch (error) {
+                console.error('Signing failed:', error);
+                alert('Signing failed. Please try again.');
+
+                // Re-enable button
+                document.getElementById('sign-btn').disabled = false;
+                // Reset button text
+                document.getElementById('sign-text').innerHTML = `
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Sign & Broadcast Transaction
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
         estimatedFees,
         status: 'prepared',
         requiresSignature: true,
-        walletConnectionUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/connect?actionId=${actionId}`,
-        signingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/sign?actionId=${actionId}`,
+        walletConnectionUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/connect.html?actionId=${actionId}`,
+        signingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app'}/wallet/sign.html?actionId=${actionId}`,
         metadata: {
           tokenIn,
           tokenOut,

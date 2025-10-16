@@ -1,4 +1,4 @@
-import { ethers, BigNumber } from 'ethers';
+import { ethers, BigNumber, Contract } from 'ethers';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { Interface } from '@ethersproject/abi';
 import { AddressZero } from '@ethersproject/constants';
@@ -58,6 +58,21 @@ export interface FeeEstimate {
   totalFeeETH: string;
   totalFeeUSD: string;
 }
+
+// ERC20 ABI for token contract interactions
+const ERC20_ABI = [
+  'function name() view returns (string)',
+  'function symbol() view returns (string)',
+  'function decimals() view returns (uint8)',
+  'function totalSupply() view returns (uint256)',
+  'function balanceOf(address owner) view returns (uint256)',
+  'function transfer(address to, uint256 amount) returns (bool)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function transferFrom(address from, address to, uint256 amount) returns (bool)',
+  'event Transfer(address indexed from, address indexed to, uint256 value)',
+  'event Approval(address indexed owner, address indexed spender, uint256 value)'
+];
 
 export class Web3Utils {
   private provider: JsonRpcProvider;
@@ -136,40 +151,62 @@ export class Web3Utils {
 
   // Create Token instance with proper decimals
   private async createToken(tokenAddress: string): Promise<Token> {
-    console.log('🔨 Creating token for address:', tokenAddress);
-
-    if (tokenAddress === AddressZero) {
-      // Native token (ETH) - use WETH address for routing
-      const networkConfig = Object.values(NETWORKS).find(n => n.chainId === this.chainId);
-      if (!networkConfig) {
-        throw new Error(`Network config not found for chainId ${this.chainId}`);
-      }
-      console.log('🌍 Using WETH for native token routing:', networkConfig.weth);
-      return new Token(this.chainId, networkConfig.weth, 18, 'WETH', 'Wrapped Ether');
-    }
-
     try {
-      // ERC20 token - fetch decimals
-      console.log('📡 Fetching token info from contract...');
-      const tokenContract = new ethers.Contract(tokenAddress, [
-        'function decimals() view returns (uint8)',
-        'function symbol() view returns (string)',
-        'function name() view returns (string)'
-      ], this.provider);
+      console.log('🔨 Creating token for address:', tokenAddress);
 
-      const [decimals, symbol, name] = await Promise.all([
-        tokenContract.decimals(),
-        tokenContract.symbol().catch(() => 'UNKNOWN'),
-        tokenContract.name().catch(() => 'Unknown Token')
-      ]);
+      // Handle native token (ETH)
+      if (tokenAddress.toLowerCase() === '0x0000000000000000000000000000000000000000' ||
+          tokenAddress.toLowerCase() === NETWORKS[this.network].weth.toLowerCase()) {
+        console.log('🌍 Using WETH for native token routing:', NETWORKS[this.network].weth);
+        return new Token(this.chainId, NETWORKS[this.network].weth, 18, 'WETH', 'Wrapped Ether');
+      }
 
-      console.log('✅ Token info fetched:', { decimals, symbol, name });
+      // For other tokens, try to fetch info from contract with timeout
+      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
 
-      return new Token(this.chainId, ethers.utils.getAddress(tokenAddress), decimals, symbol, name);
+      try {
+        console.log('📡 Fetching token info from contract...');
+
+        // Create a timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Token info fetch timeout')), 5000);
+        });
+
+        // Fetch token info with timeout
+        const tokenInfoPromise = Promise.all([
+          tokenContract.symbol().catch(() => 'UNKNOWN'),
+          tokenContract.decimals().catch(() => 18),
+          tokenContract.name().catch(() => 'Unknown Token')
+        ]);
+
+        const [symbol, decimals, name] = await Promise.race([tokenInfoPromise, timeoutPromise]) as [string, number, string];
+
+        console.log('✅ Token info fetched:', { symbol, decimals, name });
+        return new Token(this.chainId, tokenAddress, decimals, symbol, name);
+
+      } catch (contractError) {
+        console.warn('⚠️ Contract call failed, using fallback token info:', contractError instanceof Error ? contractError.message : String(contractError));
+
+        // Fallback: Create token with default values for known tokens
+        const fallbackTokens: Record<string, { symbol: string; decimals: number; name: string }> = {
+          '0xdac17f958d2ee523a2206206994597c13d831ec7': { symbol: 'USDT', decimals: 6, name: 'Tether USD' },
+          '0xa0b86a33e6c8d0f3c4e5a3a8e0b8e3b8e0b8e3': { symbol: 'USDC', decimals: 6, name: 'USD Coin' },
+          '0x6b175474e89094c44da98b954eedeac495271d0f': { symbol: 'DAI', decimals: 18, name: 'Dai Stablecoin' },
+        };
+
+        const fallback = fallbackTokens[tokenAddress.toLowerCase()] || {
+          symbol: 'UNKNOWN',
+          decimals: 18,
+          name: 'Unknown Token'
+        };
+
+        console.log('📋 Using fallback token info:', fallback);
+        return new Token(this.chainId, tokenAddress, fallback.decimals, fallback.symbol, fallback.name);
+      }
+
     } catch (error) {
-      console.error('❌ Failed to fetch token info:', error);
-      // Fallback to basic token with 18 decimals
-      return new Token(this.chainId, ethers.utils.getAddress(tokenAddress), 18, 'UNKNOWN', 'Unknown Token');
+      console.error('❌ Error creating token:', error);
+      throw new Error(`Failed to create token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

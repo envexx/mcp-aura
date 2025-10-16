@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Wallet - ENVXX MCP AURA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #10b981;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div class="container mx-auto px-4 py-8">
+            <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+                <div class="text-center mb-8">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">
+                        🔗 Connect Your Wallet
+                    </h1>
+                    <p class="text-gray-600">
+                        Connect your wallet to sign DeFi transactions securely
+                    </p>
+                </div>
+
+                <div class="space-y-4">
+                    <button onclick="connectWallet('metamask')"
+                            id="metamask-btn"
+                            class="w-full flex items-center justify-center px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors">
+                        <span id="metamask-text">
+                            <img src="https://metamask.io/images/metamask-logo.png" alt="MetaMask" class="w-6 h-6 mr-3 inline" style="filter: brightness(0) invert(1);" />
+                            Connect MetaMask
+                        </span>
+                    </button>
+
+                    <button onclick="connectWallet('walletconnect')"
+                            id="walletconnect-btn"
+                            class="w-full flex items-center justify-center px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors">
+                        <span id="walletconnect-text">
+                            <img src="https://walletconnect.com/images/walletconnect-logo.png" alt="WalletConnect" class="w-6 h-6 mr-3 inline" style="filter: brightness(0) invert(1);" />
+                            WalletConnect
+                        </span>
+                    </button>
+
+                    <button onclick="connectWallet('coinbase')"
+                            id="coinbase-btn"
+                            class="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                        <span id="coinbase-text">
+                            <img src="https://www.coinbase.com/img/coinbase-wallet-logo.png" alt="Coinbase Wallet" class="w-6 h-6 mr-3 inline" />
+                            Coinbase Wallet
+                        </span>
+                    </button>
+                </div>
+
+                <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-medium text-gray-900 mb-2">Action ID</h3>
+                    <p id="action-id" class="text-sm text-gray-600 font-mono break-all">Loading...</p>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <p class="text-sm text-gray-500">
+                        Secure connection powered by ENVXX MCP AURA
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get actionId from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const actionId = urlParams.get('actionId') || 'unknown';
+
+        // Display action ID
+        document.getElementById('action-id').textContent = actionId;
+
+        async function connectWallet(walletType) {
+            // Disable all buttons
+            const buttons = ['metamask-btn', 'walletconnect-btn', 'coinbase-btn'];
+            buttons.forEach(btnId => {
+                document.getElementById(btnId).disabled = true;
+            });
+
+            // Show loading state for clicked button
+            const buttonTextId = walletType + '-text';
+            document.getElementById(buttonTextId).innerHTML = '<div class="spinner mr-3"></div> Connecting...';
+
+            try {
+                console.log(`Connecting to ${walletType}...`);
+
+                // Simulate connection delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // For demo purposes, redirect to signing page
+                if (actionId && actionId !== 'unknown') {
+                    window.location.href = `/wallet/sign.html?actionId=${actionId}`;
+                } else {
+                    alert('No action ID found. Please go back and try again.');
+                    // Re-enable buttons
+                    buttons.forEach(btnId => {
+                        document.getElementById(btnId).disabled = false;
+                    });
+                    // Reset button text
+                    document.getElementById(buttonTextId).innerHTML = getButtonText(walletType);
+                }
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                alert('Wallet connection failed. Please try again.');
+
+                // Re-enable buttons
+                buttons.forEach(btnId => {
+                    document.getElementById(btnId).disabled = false;
+                });
+                // Reset button text
+                document.getElementById(buttonTextId).innerHTML = getButtonText(walletType);
+            }
+        }
+
+        function getButtonText(walletType) {
+            const texts = {
+                metamask: '<img src="https://metamask.io/images/metamask-logo.png" alt="MetaMask" class="w-6 h-6 mr-3 inline" style="filter: brightness(0) invert(1);" /> Connect MetaMask',
+                walletconnect: '<img src="https://walletconnect.com/images/walletconnect-logo.png" alt="WalletConnect" class="w-6 h-6 mr-3 inline" style="filter: brightness(0) invert(1);" /> WalletConnect',
+                coinbase: '<img src="https://www.coinbase.com/img/coinbase-wallet-logo.png" alt="Coinbase Wallet" class="w-6 h-6 mr-3 inline" /> Coinbase Wallet'
+            };
+            return texts[walletType] || walletType;
+        }
+    </script>
+</body>
+</html>
