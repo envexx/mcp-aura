@@ -1,4 +1,10 @@
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
+import { JsonRpcProvider } from '@ethersproject/providers';
+import { Interface } from '@ethersproject/abi';
+import { AddressZero } from '@ethersproject/constants';
+import { solidityPack } from '@ethersproject/solidity';
+import { formatEther, formatUnits, parseUnits } from '@ethersproject/units';
+import { hexlify, randomBytes } from '@ethersproject/bytes';
 
 export interface TransactionRequest {
   to: string;
@@ -42,11 +48,11 @@ export interface FeeEstimate {
 }
 
 export class Web3Utils {
-  private provider: ethers.Provider;
+  private provider: JsonRpcProvider;
   private chainId: number;
 
   constructor(rpcUrl: string, chainId: number) {
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    this.provider = new JsonRpcProvider(rpcUrl);
     this.chainId = chainId;
   }
 
@@ -54,15 +60,15 @@ export class Web3Utils {
     try {
       const gasLimit = await this.provider.estimateGas({
         to: txRequest.to,
-        value: txRequest.value || '0',
-        data: txRequest.data || '0x'
+        value: txRequest.value ? BigNumber.from(txRequest.value) : undefined,
+        data: txRequest.data ?? '0x'
       });
 
       const feeData = await this.provider.getFeeData();
-      const gasPrice = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
+      const gasPrice = feeData.gasPrice ?? parseUnits('20', 'gwei');
       
-      const totalFeeWei = gasLimit * gasPrice;
-      const totalFeeETH = ethers.formatEther(totalFeeWei);
+      const totalFeeWei = gasLimit.mul(gasPrice);
+      const totalFeeETH = formatEther(totalFeeWei);
       
       // Mock ETH price for USD calculation
       const ethPriceUSD = 2500; // This should come from a price oracle
@@ -88,13 +94,13 @@ export class Web3Utils {
     const uniswapV3RouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
     
     // Mock swap data - in production, use Uniswap SDK to encode this properly
-    const swapData = ethers.solidityPacked(
+    const swapData = solidityPack(
       ['address', 'uint256', 'address', 'uint256', 'uint256'],
       [
         params.tokenIn,
-        ethers.parseUnits(params.amountIn, 18),
+        parseUnits(params.amountIn, 18),
         params.tokenOut,
-        ethers.parseUnits(params.amountOutMin, 18),
+        parseUnits(params.amountOutMin, 18),
         params.deadline
       ]
     );
@@ -102,7 +108,7 @@ export class Web3Utils {
     return {
       to: uniswapV3RouterAddress,
       data: swapData,
-      value: params.tokenIn === ethers.ZeroAddress ? ethers.parseUnits(params.amountIn, 18).toString() : '0'
+      value: params.tokenIn === AddressZero ? parseUnits(params.amountIn, 18).toString() : '0'
     };
   }
 
@@ -112,11 +118,11 @@ export class Web3Utils {
     const stargateRouterAddress = '0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614';
     
     // Mock bridge data
-    const bridgeData = ethers.solidityPacked(
+    const bridgeData = solidityPack(
       ['address', 'uint256', 'string', 'address'],
       [
         params.token,
-        ethers.parseUnits(params.amount, 18),
+        parseUnits(params.amount, 18),
         params.destinationChain,
         params.recipient
       ]
@@ -130,21 +136,21 @@ export class Web3Utils {
   }
 
   async buildTransferTransaction(params: TransferParams): Promise<TransactionRequest> {
-    if (params.token === ethers.ZeroAddress) {
+    if (params.token === AddressZero) {
       // ETH transfer
       return {
         to: params.recipient,
-        value: ethers.parseUnits(params.amount, 18).toString()
+        value: parseUnits(params.amount, 18).toString()
       };
     } else {
       // ERC20 transfer
-      const erc20Interface = new ethers.Interface([
+      const erc20Interface = new Interface([
         'function transfer(address to, uint256 amount) returns (bool)'
       ]);
       
       const transferData = erc20Interface.encodeFunctionData('transfer', [
         params.recipient,
-        ethers.parseUnits(params.amount, 18)
+        parseUnits(params.amount, 18)
       ]);
 
       return {
@@ -156,19 +162,19 @@ export class Web3Utils {
   }
 
   async getTokenBalance(tokenAddress: string, walletAddress: string): Promise<string> {
-    if (tokenAddress === ethers.ZeroAddress) {
+    if (tokenAddress === AddressZero) {
       // ETH balance
       const balance = await this.provider.getBalance(walletAddress);
-      return ethers.formatEther(balance);
+      return formatEther(balance);
     } else {
       // ERC20 balance
-      const erc20Interface = new ethers.Interface([
+      const erc20Interface = new Interface([
         'function balanceOf(address owner) view returns (uint256)'
       ]);
       
       const contract = new ethers.Contract(tokenAddress, erc20Interface, this.provider);
       const balance = await contract.balanceOf(walletAddress);
-      return ethers.formatUnits(balance, 18); // Assuming 18 decimals
+      return formatUnits(balance, 18); // Assuming 18 decimals
     }
   }
 
@@ -208,7 +214,7 @@ export class Web3Utils {
       topic: `mcp-aura-${Date.now()}`,
       version: '2',
       bridge: 'https://bridge.walletconnect.org',
-      key: ethers.hexlify(ethers.randomBytes(32)),
+      key: hexlify(randomBytes(32)),
       chainId: this.chainId,
       operation: params.operation,
       txData: params.txData,
