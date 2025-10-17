@@ -27,12 +27,25 @@ function WalletContent({ searchParams }: WalletPageProps) {
     const init = async () => {
       const params = await searchParams;
 
+      console.log('🔍 Wallet Page Debug - Raw searchParams:', params);
+      console.log('🔍 Wallet Page Debug - typeof params:', typeof params);
+      console.log('🔍 Wallet Page Debug - params keys:', Object.keys(params || {}));
+
       // Parse URL parameters for deep link
       const actionParam = typeof params.action === 'string' ? params.action : '';
       const fromTokenParam = typeof params.fromToken === 'string' ? params.fromToken : '';
       const toTokenParam = typeof params.toToken === 'string' ? params.toToken : '';
       const amountParam = typeof params.amount === 'string' ? params.amount : '';
       const nonceParam = typeof params.nonce === 'string' ? params.nonce : '';
+
+      console.log('🔍 Wallet Page Debug - Parsed params:', {
+        actionParam,
+        fromTokenParam,
+        toTokenParam,
+        amountParam,
+        nonceParam
+      });
+      console.log('🔍 Wallet Page Debug - actionParam type:', typeof actionParam, 'value:', actionParam);
 
       setAction(actionParam);
       setFromToken(fromTokenParam);
@@ -43,12 +56,14 @@ function WalletContent({ searchParams }: WalletPageProps) {
 
       // Determine next step based on connection status
       if (actionParam) {
+        console.log('✅ Wallet Page Debug - Action parameter found, proceeding to wallet flow');
         if (isConnected) {
           setCurrentStep('sign');
         } else {
           setCurrentStep('connect');
         }
       } else {
+        console.log('❌ Wallet Page Debug - No action parameter found, redirecting');
         alert('No action specified in URL');
         window.location.href = '/';
       }

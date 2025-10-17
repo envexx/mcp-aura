@@ -4,7 +4,9 @@ const dotenv = require('dotenv');
 // Load environment variables from .env file
 dotenv.config();
 
-const BASE_URL = 'http://localhost:3000'; // Force localhost for testing local changes
+const BASE_URL = process.env.NODE_ENV === 'production'
+  ? (process.env.NEXT_PUBLIC_BASE_URL || 'https://mcp-aura.vercel.app')
+  : 'http://localhost:3000';
 const WALLET_CONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 console.log('🧪 Testing Wallet Integration with Environment Variables');
@@ -49,6 +51,30 @@ async function testActionAPI() {
     console.log('   - operation:', result.data?.operation);
     console.log('   - status:', result.data?.status);
     console.log('   - walletConnectionUrl:', result.data?.walletConnectionUrl);
+
+    // Analyze the generated URL
+    const walletUrl = result.data?.walletConnectionUrl;
+    if (walletUrl) {
+      const url = new URL(walletUrl);
+      console.log('🔍 URL Analysis:');
+      console.log('   - Protocol:', url.protocol);
+      console.log('   - Hostname:', url.hostname);
+      console.log('   - Port:', url.port || 'default');
+      console.log('   - Pathname:', url.pathname);
+      console.log('   - Search params:', url.search);
+
+      // Check if URL matches expected environment
+      const expectedHost = process.env.NODE_ENV === 'production'
+        ? 'mcp-aura.vercel.app'
+        : 'localhost';
+
+      if (url.hostname === expectedHost) {
+        console.log(`✅ URL hostname matches ${process.env.NODE_ENV} environment`);
+      } else {
+        console.log(`❌ URL hostname mismatch! Expected: ${expectedHost}, Got: ${url.hostname}`);
+        console.log('💡 This indicates a configuration issue in the action API');
+      }
+    }
 
     return result.data;
   } catch (error) {
