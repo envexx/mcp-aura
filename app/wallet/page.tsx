@@ -15,8 +15,10 @@ function WalletContent({ searchParams }: WalletPageProps) {
   const [toToken, setToToken] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
   const [nonce, setNonce] = useState<string>('');
-  const [currentStep, setCurrentStep] = useState<'loading' | 'connect' | 'sign' | 'success'>('loading');
-
+  const [currentStep, setCurrentStep] = useState<'loading' | 'connect' | 'sign' | 'success' | 'error'>('loading');
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [transactionPreview, setTransactionPreview] = useState<any>(null);
   const { address, isConnected } = useAccount();
   const { sendTransaction, isPending: isSendPending, data: txHash } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
@@ -24,69 +26,122 @@ function WalletContent({ searchParams }: WalletPageProps) {
   });
 
   useEffect(() => {
+    let isMounted = true;
+
     const init = async () => {
       try {
+        console.log('🔍 Initializing wallet page...');
+        
+        // Resolve Promise searchParams
         const params = await searchParams;
+        
+        if (!isMounted) return;
 
-        // Parse URL parameters for deep link with additional safety checks
+        console.log('📦 Received params:', params);
+
+        // Parse parameters dengan null check yang lebih baik
         const actionParam = params?.action;
         const fromTokenParam = params?.fromToken;
         const toTokenParam = params?.toToken;
         const amountParam = params?.amount;
         const nonceParam = params?.nonce;
 
-        // Additional validation - ensure actionParam is a non-empty string
-        const validatedActionParam = (typeof actionParam === 'string' && actionParam.trim().length > 0) ? actionParam.trim() : '';
+        // Validasi action - support string atau array
+        let validatedAction = '';
+        if (typeof actionParam === 'string') {
+          validatedAction = actionParam.trim();
+        } else if (Array.isArray(actionParam) && actionParam.length > 0) {
+          validatedAction = String(actionParam[0]).trim();
+        }
 
-        setAction(validatedActionParam);
+        console.log('✅ Validated action:', validatedAction);
+
+        // Validate action exists
+        if (!validatedAction) {
+          console.error('❌ No action specified');
+          setErrorMessage('No action specified in URL parameters');
+          setCurrentStep('error');
+          setIsInitialized(true);
+          
+          // Redirect after showing error
+          setTimeout(() => {
+            if (isMounted) {
+              window.location.href = '/';
+            }
+          }, 3000);
+          return;
+        }
+
+        // Set states
+        setAction(validatedAction);
         setFromToken(typeof fromTokenParam === 'string' ? fromTokenParam : '');
         setToToken(typeof toTokenParam === 'string' ? toTokenParam : '');
         setAmount(typeof amountParam === 'string' ? amountParam : '');
         setNonce(typeof nonceParam === 'string' ? nonceParam : '');
         setActionId(typeof nonceParam === 'string' ? nonceParam : '');
 
-        // Determine next step based on connection status
-        if (validatedActionParam) {
-          if (isConnected) {
-            setCurrentStep('sign');
-          } else {
-            setCurrentStep('connect');
-          }
+        // Create transaction preview
+        const preview = {
+          action: validatedAction,
+          fromToken: typeof fromTokenParam === 'string' ? fromTokenParam : '',
+          toToken: typeof toTokenParam === 'string' ? toTokenParam : '',
+          amount: typeof amountParam === 'string' ? amountParam : '',
+          nonce: typeof nonceParam === 'string' ? nonceParam : '',
+        };
+        setTransactionPreview(preview);
+
+        // Check if wallet is already connected
+        if (isConnected && address) {
+          console.log('✅ Wallet already connected:', address);
+          setCurrentStep('sign');
         } else {
-          console.error('Wallet Page Error: No valid action specified in URL', {
-            rawParams: params,
-            actionParam,
-            validatedActionParam,
-            url: window.location.href
-          });
-          // Temporarily remove alert for debugging - show error in console only
-          console.error('🚨 WALLET ERROR: No action specified in URL. Please check the link and try again.');
-          // Add a small delay before redirect to allow debugging
-          setTimeout(() => {
-            console.log('🔄 Redirecting to home page...');
-            window.location.href = '/';
-          }, 2000);
+          console.log('⚠️ Wallet not connected, showing connect screen');
+          setCurrentStep('connect');
         }
+
+        setIsInitialized(true);
+        
       } catch (error) {
-        console.error('Wallet Page Error: Failed to parse URL parameters', error);
-        console.error('🚨 WALLET ERROR: Error loading wallet page. Please try again.');
-        setTimeout(() => {
-          console.log('🔄 Redirecting to home page due to error...');
-          window.location.href = '/';
-        }, 2000);
+        console.error('❌ Error initializing wallet page:', error);
+        if (isMounted) {
+          setErrorMessage('Failed to load transaction details');
+          setCurrentStep('error');
+          setIsInitialized(true);
+          
+          setTimeout(() => {
+            if (isMounted) {
+              window.location.href = '/';
+            }
+          }, 3000);
+        }
       }
     };
+
     init();
-  }, [searchParams]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // ✅ Empty dependency array - hanya run sekali
 
   useEffect(() => {
     // Auto-advance to sign step when wallet connects
-    if (isConnected && address && currentStep === 'connect') {
-      localStorage.setItem('wallet_connected', 'true');
-      localStorage.setItem('wallet_address', address);
+    if (isInitialized && isConnected && address && currentStep === 'connect') {
+      console.log('✅ Wallet connected, advancing to sign step');
+      
+      // ✅ FIX 3: Safe localStorage access dengan try-catch
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('wallet_connected', 'true');
+          localStorage.setItem('wallet_address', address);
+        }
+      } catch (e) {
+        console.warn('localStorage not available:', e);
+      }
+      
       setCurrentStep('sign');
     }
-  }, [isConnected, address, currentStep]);
+  }, [isConnected, address, currentStep, isInitialized]);
 
   useEffect(() => {
     if (isConfirmed && txHash) {
@@ -99,23 +154,58 @@ function WalletContent({ searchParams }: WalletPageProps) {
   }, [isConfirmed, txHash]);
 
   const handleSignTransaction = () => {
+    console.log('🔐 Signing transaction for action:', action);
+    
     if (action !== 'swap') {
       alert('Unsupported action: ' + action);
       return;
     }
 
-    // For demo purposes, create a simple transaction
-    // In real implementation, this would construct the proper swap transaction
-    sendTransaction({
-      to: '0xE592427A0AEce92De3Edee1F18E0157C05861564', // Uniswap V3 SwapRouter02
-      data: '0x', // Would contain proper swap data
-      value: BigInt(0),
-    });
+    // Validate required parameters
+    if (!fromToken || !toToken || !amount) {
+      alert('Missing required parameters: fromToken, toToken, or amount');
+      return;
+    }
+
+    try {
+      // For demo purposes, construct a mock swap transaction
+      // In real implementation, this would use Uniswap SDK to construct proper swap data
+      // For now, we'll create a mock transaction that demonstrates the flow
+
+      // Mock swap data - in real app, this would be generated by Uniswap SDK
+      const mockSwapData = '0x7ff36ab5' + // swapExactETHForTokens function selector
+        '0000000000000000000000000000000000000000000000000000000000000080' + // deadline
+        '0000000000000000000000000000000000000000000000000000000000000002' + // path length
+        '000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' + // WETH
+        '0000000000000000000000006b175474e89094c44da98b954eedeac495271d0f' + // DAI
+        '0000000000000000000000000000000000000000000000000000000000000000' + // to address (0x0 for demo)
+        'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';   // deadline (uint256 max)
+
+      const transactionValue = action === 'swap' && fromToken.toLowerCase() === 'eth'
+        ? BigInt(amount) * BigInt(10 ** 18) // Convert ETH amount to wei
+        : BigInt(0);
+
+      sendTransaction({
+        to: '0xE592427A0AEce92De3Edee1F18E0157C05861564', // Uniswap V3 SwapRouter02
+        data: mockSwapData as `0x${string}`,
+        value: transactionValue,
+      });
+    } catch (error) {
+      console.error('❌ Error sending transaction:', error);
+      alert('Failed to send transaction: ' + (error as Error).message);
+    }
   };
 
   const handleDisconnect = () => {
-    localStorage.removeItem('wallet_connected');
-    localStorage.removeItem('wallet_address');
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('wallet_connected');
+        localStorage.removeItem('wallet_address');
+      }
+    } catch (e) {
+      console.warn('localStorage not available:', e);
+    }
+    
     setCurrentStep('connect');
     window.location.reload();
   };
@@ -156,6 +246,14 @@ function WalletContent({ searchParams }: WalletPageProps) {
               </div>
             )}
 
+            {currentStep === 'error' && (
+              <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            )}
+
             {currentStep === 'connect' && (
               <>
                 <h1 className="text-3xl font-bold text-white mb-2">🔗 Connect Wallet</h1>
@@ -174,6 +272,14 @@ function WalletContent({ searchParams }: WalletPageProps) {
               <>
                 <h1 className="text-3xl font-bold text-emerald-300 mb-2">✅ Transaction Successful!</h1>
                 <p className="text-emerald-200">Your DeFi transaction has been broadcast to the network</p>
+              </>
+            )}
+
+            {currentStep === 'error' && (
+              <>
+                <h1 className="text-3xl font-bold text-red-400 mb-2">❌ Error</h1>
+                <p className="text-red-200">{errorMessage}</p>
+                <p className="text-gray-400 text-sm mt-2">Redirecting to home...</p>
               </>
             )}
           </div>
@@ -203,6 +309,21 @@ function WalletContent({ searchParams }: WalletPageProps) {
                 </div>
                 <h1 className="text-3xl font-bold text-white mb-2">Connect Wallet</h1>
                 <p className="text-gray-300 mb-8">Connect your wallet to sign the {action} transaction</p>
+                
+                {/* Show transaction preview */}
+                {transactionPreview && (
+                  <div className="bg-gray-700/50 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-gray-300 mb-2">Transaction Preview:</p>
+                    <div className="text-left space-y-1">
+                      <p className="text-xs text-gray-400">Action: <span className="text-white">{transactionPreview.action}</span></p>
+                      {transactionPreview.fromToken && <p className="text-xs text-gray-400">From: <span className="text-white">{transactionPreview.fromToken}</span></p>}
+                      {transactionPreview.toToken && <p className="text-xs text-gray-400">To: <span className="text-white">{transactionPreview.toToken}</span></p>}
+                      {transactionPreview.amount && <p className="text-xs text-gray-400">Amount: <span className="text-white">{transactionPreview.amount}</span></p>}
+                      {transactionPreview.nonce && <p className="text-xs text-gray-400">Nonce: <span className="text-white">{transactionPreview.nonce}</span></p>}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="max-w-xs mx-auto">
                   <ConnectButton.Custom>
                     {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
