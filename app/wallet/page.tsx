@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useSearchParams } from 'next/navigation';
@@ -554,5 +554,9 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
 }
 
 export default function WalletPage(props: WalletPageProps) {
-  return <WalletContent {...props} />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-900 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-4 border-white"></div></div>}>
+      <WalletContent {...props} />
+    </Suspense>
+  );
 }
