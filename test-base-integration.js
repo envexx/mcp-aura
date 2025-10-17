@@ -233,7 +233,6 @@ function testBaseConfiguration() {
   console.log(`   - Explorer: ${baseConfig.explorerUrl}`);
   console.log(`   - ETH Token: ${baseTokens.ETH}`);
   console.log(`   - USDC Token: ${baseTokens.USDC}`);
-
   return true;
 }
 
@@ -263,18 +262,125 @@ function testMcpSchemaCompatibility() {
   console.log('\n🎉 MCP schema compatibility test passed!');
   return true;
 }
+function normalizeNetwork(value) {
+  const cleaned = value.trim().toLowerCase();
+  const aliases = {
+    // Ethereum aliases
+    ethereum: 'ethereum',
+    'eth': 'ethereum',
+    'mainnet': 'ethereum',
+    'ethereum mainnet': 'ethereum',
+    'eth mainnet': 'ethereum',
+    
+    // Polygon aliases
+    'polygon': 'polygon',
+    'matic': 'polygon',
+    'polygon mainnet': 'polygon',
+    'matic mainnet': 'polygon',
+    
+    // Arbitrum aliases
+    'arbitrum': 'arbitrum',
+    'arbitrum one': 'arbitrum',
+    'arb': 'arbitrum',
+    'arbitrum mainnet': 'arbitrum',
+    
+    // Optimism aliases
+    'optimism': 'optimism',
+    'op': 'optimism',
+    'optimism mainnet': 'optimism',
+    
+    // Base aliases
+    'base': 'base',
+    'base mainnet': 'base',
+    'base network': 'base',
+    
+    // BNB Chain aliases
+    'bnb': 'bnb',
+    'bnb chain': 'bnb',
+    'bsc': 'bnb',
+    'binance': 'bnb',
+    'binance smart chain': 'bnb',
+    
+    // Avalanche aliases
+    'avalanche': 'avalanche',
+    'avax': 'avalanche',
+    'avalanche c-chain': 'avalanche',
+    'avalanche mainnet': 'avalanche',
+    
+    // Celo aliases
+    'celo': 'celo',
+    'celo mainnet': 'celo'
+  };
+
+  return aliases[cleaned] || cleaned;
+}
+
+function testNetworkNormalization() {
+  console.log('\n🧪 Testing network normalization...\n');
+
+  // Test cases for Base network
+  const baseTestCases = [
+    { input: 'Base', expected: 'base' },
+    { input: 'base', expected: 'base' },
+    { input: 'BASE', expected: 'base' },
+    { input: 'Base Mainnet', expected: 'base' },
+    { input: 'base mainnet', expected: 'base' },
+    { input: 'Base Network', expected: 'base' }
+  ];
+
+  console.log('Testing Base network parsing:');
+  for (const testCase of baseTestCases) {
+    const result = normalizeNetwork(testCase.input);
+    const success = result === testCase.expected;
+    console.log(`  "${testCase.input}" → "${result}" ${success ? '✅' : '❌'}`);
+    if (!success) {
+      throw new Error(`Network normalization failed for "${testCase.input}". Expected: "${testCase.expected}", Got: "${result}"`);
+    }
+  }
+
+  // Test other networks
+  const otherTestCases = [
+    { input: 'Ethereum', expected: 'ethereum' },
+    { input: 'ETH', expected: 'ethereum' },
+    { input: 'Polygon', expected: 'polygon' },
+    { input: 'MATIC', expected: 'polygon' },
+    { input: 'Arbitrum', expected: 'arbitrum' },
+    { input: 'ARB', expected: 'arbitrum' },
+    { input: 'Optimism', expected: 'optimism' },
+    { input: 'OP', expected: 'optimism' },
+    { input: 'BNB', expected: 'bnb' },
+    { input: 'BSC', expected: 'bnb' },
+    { input: 'Avalanche', expected: 'avalanche' },
+    { input: 'AVAX', expected: 'avalanche' },
+    { input: 'Celo', expected: 'celo' }
+  ];
+
+  console.log('\nTesting other network parsing:');
+  for (const testCase of otherTestCases) {
+    const result = normalizeNetwork(testCase.input);
+    const success = result === testCase.expected;
+    console.log(`  "${testCase.input}" → "${result}" ${success ? '✅' : '❌'}`);
+    if (!success) {
+      throw new Error(`Network normalization failed for "${testCase.input}". Expected: "${testCase.expected}", Got: "${result}"`);
+    }
+  }
+
+  console.log('\n🎉 Network normalization test passed!');
+  return true;
+}
 
 // Main test runner
 async function runAllTests() {
-  console.log('🚀 Starting Base mainnet configuration tests...\n');
+  console.log('🚀 Starting Base mainnet integration tests...\n');
 
   try {
     testBaseConfiguration();
     testMcpSchemaCompatibility();
+    testNetworkNormalization();
 
     console.log('\n🎉 All tests completed successfully!');
     console.log('✅ Base mainnet is fully configured for Uniswap V3 swaps.');
-    console.log('💡 Ready for production use with wallet page and MCP API.');
+    console.log('✅ Network parsing works correctly for all networks including Base.');
 
   } catch (error) {
     console.error('\n💥 Test suite failed:', error.message);

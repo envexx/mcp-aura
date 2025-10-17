@@ -415,22 +415,57 @@ function normalizePayload(payload: Record<string, unknown>) {
 function normalizeNetwork(value: string) {
   const cleaned = value.trim().toLowerCase();
   const aliases: Record<string, typeof NETWORK_OPTIONS[number]> = {
+    // Ethereum aliases
     ethereum: 'ethereum',
     'eth': 'ethereum',
     'mainnet': 'ethereum',
     'ethereum mainnet': 'ethereum',
+    'eth mainnet': 'ethereum',
+    
+    // Polygon aliases
+    'polygon': 'polygon',
+    'matic': 'polygon',
+    'polygon mainnet': 'polygon',
+    'matic mainnet': 'polygon',
+    
+    // Arbitrum aliases
     'arbitrum': 'arbitrum',
     'arbitrum one': 'arbitrum',
     'arb': 'arbitrum',
-    'polygon': 'polygon',
-    'matic': 'polygon',
-    'polygon mainnet': 'polygon'
+    'arbitrum mainnet': 'arbitrum',
+    
+    // Optimism aliases
+    'optimism': 'optimism',
+    'op': 'optimism',
+    'optimism mainnet': 'optimism',
+    
+    // Base aliases
+    'base': 'base',
+    'base mainnet': 'base',
+    'base network': 'base',
+    
+    // BNB Chain aliases
+    'bnb': 'bnb',
+    'bnb chain': 'bnb',
+    'bsc': 'bnb',
+    'binance': 'bnb',
+    'binance smart chain': 'bnb',
+    
+    // Avalanche aliases
+    'avalanche': 'avalanche',
+    'avax': 'avalanche',
+    'avalanche c-chain': 'avalanche',
+    'avalanche mainnet': 'avalanche',
+    
+    // Celo aliases
+    'celo': 'celo',
+    'celo mainnet': 'celo'
   };
 
   return aliases[cleaned] ?? cleaned;
 }
 
-const NETWORK_OPTIONS = ['ethereum', 'arbitrum', 'polygon'] as const;
+const NETWORK_OPTIONS = ['ethereum', 'polygon', 'arbitrum', 'optimism', 'base', 'bnb', 'avalanche', 'celo'] as const;
 
 function normalizeNumericString(value: string) {
   const cleaned = value.trim();
