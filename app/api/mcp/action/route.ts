@@ -59,7 +59,16 @@ const actionSchema = z.object({
   tokenIn: z.string().min(1, 'Input token is required'),
   tokenOut: z.string().min(1, 'Output token is required'),
   amountIn: z.string().min(1, 'Amount is required'),
-  network: z.enum(['ethereum', 'arbitrum', 'polygon']),
+  network: z.enum([
+    'ethereum', 
+    'polygon', 
+    'arbitrum', 
+    'optimism', 
+    'base', 
+    'bnb', 
+    'avalanche', 
+    'celo'
+  ]),
   slippage: z.string().optional().default('0.5'),
   deadline: z.number().optional(),
 });
