@@ -18,6 +18,7 @@ function WalletContent({ searchParams }: WalletPageProps) {
   const [currentStep, setCurrentStep] = useState<'loading' | 'connect' | 'sign' | 'success' | 'error'>('loading');
   const [isInitialized, setIsInitialized] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const [transactionPreview, setTransactionPreview] = useState<any>(null);
   const { address, isConnected } = useAccount();
   const { sendTransaction, isPending: isSendPending, data: txHash } = useSendTransaction();
@@ -31,66 +32,68 @@ function WalletContent({ searchParams }: WalletPageProps) {
     const init = async () => {
       try {
         console.log('🔍 Initializing wallet page...');
-        
-        // Resolve Promise searchParams
+
         const params = await searchParams;
-        
+        console.log('📦 Raw searchParams:', params);
+
+        const getParamValue = (param: any): string => {
+          if (typeof param === 'string') return param.trim();
+          if (Array.isArray(param) && param.length > 0) return String(param[0]).trim();
+          return '';
+        };
+
+        const actionParam = getParamValue(params?.action);
+        const fromTokenParam = getParamValue(params?.fromToken);
+        const toTokenParam = getParamValue(params?.toToken);
+        const amountParam = getParamValue(params?.amount);
+        const nonceParam = getParamValue(params?.nonce);
+
+        const debug = `
+Action: "${actionParam}" (length: ${actionParam.length})
+FromToken: "${fromTokenParam}"
+ToToken: "${toTokenParam}"
+Amount: "${amountParam}"
+Nonce: "${nonceParam}"
+URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}
+        `.trim();
+
+        console.log('🔍 Parsed params:', debug);
+        setDebugInfo(debug);
+
         if (!isMounted) return;
 
-        console.log('📦 Received params:', params);
-
-        // Parse parameters dengan null check yang lebih baik
-        const actionParam = params?.action;
-        const fromTokenParam = params?.fromToken;
-        const toTokenParam = params?.toToken;
-        const amountParam = params?.amount;
-        const nonceParam = params?.nonce;
-
-        // Validasi action - support string atau array
-        let validatedAction = '';
-        if (typeof actionParam === 'string') {
-          validatedAction = actionParam.trim();
-        } else if (Array.isArray(actionParam) && actionParam.length > 0) {
-          validatedAction = String(actionParam[0]).trim();
-        }
-
-        console.log('✅ Validated action:', validatedAction);
-
-        // Validate action exists
-        if (!validatedAction) {
+        if (!actionParam) {
           console.error('❌ No action specified');
-          setErrorMessage('No action specified in URL parameters');
+          const errorMsg = `No action specified in URL parameters.
+
+Expected format:
+/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=12345
+
+Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
+
+          setErrorMessage(errorMsg);
           setCurrentStep('error');
           setIsInitialized(true);
-          
-          // Redirect after showing error
-          setTimeout(() => {
-            if (isMounted) {
-              window.location.href = '/';
-            }
-          }, 3000);
+
           return;
         }
 
-        // Set states
-        setAction(validatedAction);
-        setFromToken(typeof fromTokenParam === 'string' ? fromTokenParam : '');
-        setToToken(typeof toTokenParam === 'string' ? toTokenParam : '');
-        setAmount(typeof amountParam === 'string' ? amountParam : '');
-        setNonce(typeof nonceParam === 'string' ? nonceParam : '');
-        setActionId(typeof nonceParam === 'string' ? nonceParam : '');
+        setAction(actionParam);
+        setFromToken(fromTokenParam);
+        setToToken(toTokenParam);
+        setAmount(amountParam);
+        setNonce(nonceParam);
+        setActionId(nonceParam);
 
-        // Create transaction preview
         const preview = {
-          action: validatedAction,
-          fromToken: typeof fromTokenParam === 'string' ? fromTokenParam : '',
-          toToken: typeof toTokenParam === 'string' ? toTokenParam : '',
-          amount: typeof amountParam === 'string' ? amountParam : '',
-          nonce: typeof nonceParam === 'string' ? nonceParam : '',
+          action: actionParam,
+          fromToken: fromTokenParam,
+          toToken: toTokenParam,
+          amount: amountParam,
+          nonce: nonceParam,
         };
         setTransactionPreview(preview);
 
-        // Check if wallet is already connected
         if (isConnected && address) {
           console.log('✅ Wallet already connected:', address);
           setCurrentStep('sign');
@@ -100,19 +103,13 @@ function WalletContent({ searchParams }: WalletPageProps) {
         }
 
         setIsInitialized(true);
-        
+
       } catch (error) {
         console.error('❌ Error initializing wallet page:', error);
         if (isMounted) {
-          setErrorMessage('Failed to load transaction details');
+          setErrorMessage('Failed to load transaction details: ' + String(error));
           setCurrentStep('error');
           setIsInitialized(true);
-          
-          setTimeout(() => {
-            if (isMounted) {
-              window.location.href = '/';
-            }
-          }, 3000);
         }
       }
     };
@@ -122,23 +119,11 @@ function WalletContent({ searchParams }: WalletPageProps) {
     return () => {
       isMounted = false;
     };
-  }, []); // ✅ Empty dependency array - hanya run sekali
+  }, [isConnected]);
 
   useEffect(() => {
-    // Auto-advance to sign step when wallet connects
     if (isInitialized && isConnected && address && currentStep === 'connect') {
       console.log('✅ Wallet connected, advancing to sign step');
-      
-      // ✅ FIX 3: Safe localStorage access dengan try-catch
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('wallet_connected', 'true');
-          localStorage.setItem('wallet_address', address);
-        }
-      } catch (e) {
-        console.warn('localStorage not available:', e);
-      }
-      
       setCurrentStep('sign');
     }
   }, [isConnected, address, currentStep, isInitialized]);
@@ -146,47 +131,37 @@ function WalletContent({ searchParams }: WalletPageProps) {
   useEffect(() => {
     if (isConfirmed && txHash) {
       setCurrentStep('success');
-
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 3000);
     }
   }, [isConfirmed, txHash]);
 
   const handleSignTransaction = () => {
     console.log('🔐 Signing transaction for action:', action);
-    
+
     if (action !== 'swap') {
       alert('Unsupported action: ' + action);
       return;
     }
 
-    // Validate required parameters
     if (!fromToken || !toToken || !amount) {
       alert('Missing required parameters: fromToken, toToken, or amount');
       return;
     }
 
     try {
-      // For demo purposes, construct a mock swap transaction
-      // In real implementation, this would use Uniswap SDK to construct proper swap data
-      // For now, we'll create a mock transaction that demonstrates the flow
-
-      // Mock swap data - in real app, this would be generated by Uniswap SDK
-      const mockSwapData = '0x7ff36ab5' + // swapExactETHForTokens function selector
-        '0000000000000000000000000000000000000000000000000000000000000080' + // deadline
-        '0000000000000000000000000000000000000000000000000000000000000002' + // path length
-        '000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' + // WETH
-        '0000000000000000000000006b175474e89094c44da98b954eedeac495271d0f' + // DAI
-        '0000000000000000000000000000000000000000000000000000000000000000' + // to address (0x0 for demo)
-        'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';   // deadline (uint256 max)
+      const mockSwapData = '0x7ff36ab5' +
+        '0000000000000000000000000000000000000000000000000000000000000080' +
+        '0000000000000000000000000000000000000000000000000000000000000002' +
+        '000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2' +
+        '0000000000000000000000006b175474e89094c44da98b954eedeac495271d0f' +
+        '0000000000000000000000000000000000000000000000000000000000000000' +
+        'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
       const transactionValue = action === 'swap' && fromToken.toLowerCase() === 'eth'
-        ? BigInt(amount) * BigInt(10 ** 18) // Convert ETH amount to wei
+        ? BigInt(amount) * BigInt(10 ** 18)
         : BigInt(0);
 
       sendTransaction({
-        to: '0xE592427A0AEce92De3Edee1F18E0157C05861564', // Uniswap V3 SwapRouter02
+        to: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
         data: mockSwapData as `0x${string}`,
         value: transactionValue,
       });
@@ -197,15 +172,6 @@ function WalletContent({ searchParams }: WalletPageProps) {
   };
 
   const handleDisconnect = () => {
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('wallet_connected');
-        localStorage.removeItem('wallet_address');
-      }
-    } catch (e) {
-      console.warn('localStorage not available:', e);
-    }
-    
     setCurrentStep('connect');
     window.location.reload();
   };
@@ -214,7 +180,6 @@ function WalletContent({ searchParams }: WalletPageProps) {
     <div className="min-h-screen bg-gray-900">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-8">
-          {/* Header */}
           <div className="text-center mb-8">
             {currentStep === 'loading' && (
               <div className="w-16 h-16 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -254,63 +219,50 @@ function WalletContent({ searchParams }: WalletPageProps) {
               </div>
             )}
 
-            {currentStep === 'connect' && (
-              <>
-                <h1 className="text-3xl font-bold text-white mb-2">🔗 Connect Wallet</h1>
-                <p className="text-gray-300">Connect your wallet to sign the DeFi transaction</p>
-              </>
-            )}
-
-            {currentStep === 'sign' && (
-              <>
-                <h1 className="text-3xl font-bold text-white mb-2">✍️ Sign Transaction</h1>
-                <p className="text-gray-300">Review the transaction details and sign</p>
-              </>
-            )}
-
-            {currentStep === 'success' && (
-              <>
-                <h1 className="text-3xl font-bold text-emerald-300 mb-2">✅ Transaction Successful!</h1>
-                <p className="text-emerald-200">Your DeFi transaction has been broadcast to the network</p>
-              </>
-            )}
-
-            {currentStep === 'error' && (
-              <>
-                <h1 className="text-3xl font-bold text-red-400 mb-2">❌ Error</h1>
-                <p className="text-red-200">{errorMessage}</p>
-                <p className="text-gray-400 text-sm mt-2">Redirecting to home...</p>
-              </>
-            )}
+            <h1 className="text-3xl font-bold text-white mb-2">
+              {currentStep === 'connect' && '🔗 Connect Wallet'}
+              {currentStep === 'sign' && '✍️ Sign Transaction'}
+              {currentStep === 'success' && '✅ Transaction Successful!'}
+              {currentStep === 'error' && '❌ Error'}
+              {currentStep === 'loading' && '⏳ Loading'}
+            </h1>
           </div>
 
-          {currentStep === 'loading' && (
+          {currentStep === 'error' && (
             <div className="space-y-6">
-              <div className="bg-blue-500/20 border border-blue-400/30 rounded-xl p-6">
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-400"></div>
-                  <div className="ml-4">
-                    <p className="text-lg font-semibold text-blue-300">Loading Transaction</p>
-                    <p className="text-sm text-blue-200">Please wait...</p>
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6">
+                <div className="text-center">
+                  <p className="text-red-300 mb-4 whitespace-pre-wrap">{errorMessage}</p>
+
+                  <div className="bg-red-500/20 rounded-lg p-4 mb-4">
+                    <h3 className="text-sm font-medium text-red-200 mb-2">Expected URL Format:</h3>
+                    <code className="text-xs text-red-100 bg-red-500/30 p-2 rounded block break-all">
+                      /wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=12345
+                    </code>
+                  </div>
+
+                  <div className="bg-gray-700/50 rounded-lg p-4 mb-4">
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">📊 Debug Info:</h3>
+                    <pre className="text-xs text-gray-400 text-left overflow-auto max-h-32 bg-gray-800 p-2 rounded">
+                      {debugInfo}
+                    </pre>
+                  </div>
+
+                  <div className="bg-gray-700/50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">🔗 Quick Test URLs:</h3>
+                    <div className="space-y-2 text-xs">
+                      <div><a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test123" className="text-blue-400 hover:text-blue-300 underline">Swap 1 ETH to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=USDC&toToken=ETH&amount=100&nonce=test456" className="text-blue-400 hover:text-blue-300 underline">Swap 100 USDC to ETH</a></div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Connect Step */}
           {currentStep === 'connect' && (
             <div className="space-y-6">
               <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <h1 className="text-3xl font-bold text-white mb-2">Connect Wallet</h1>
-                <p className="text-gray-300 mb-8">Connect your wallet to sign the {action} transaction</p>
-                
-                {/* Show transaction preview */}
                 {transactionPreview && (
                   <div className="bg-gray-700/50 rounded-lg p-4 mb-6">
                     <p className="text-sm text-gray-300 mb-2">Transaction Preview:</p>
@@ -319,66 +271,37 @@ function WalletContent({ searchParams }: WalletPageProps) {
                       {transactionPreview.fromToken && <p className="text-xs text-gray-400">From: <span className="text-white">{transactionPreview.fromToken}</span></p>}
                       {transactionPreview.toToken && <p className="text-xs text-gray-400">To: <span className="text-white">{transactionPreview.toToken}</span></p>}
                       {transactionPreview.amount && <p className="text-xs text-gray-400">Amount: <span className="text-white">{transactionPreview.amount}</span></p>}
-                      {transactionPreview.nonce && <p className="text-xs text-gray-400">Nonce: <span className="text-white">{transactionPreview.nonce}</span></p>}
                     </div>
                   </div>
                 )}
-                
+
                 <div className="max-w-xs mx-auto">
                   <ConnectButton.Custom>
-                    {({ account, chain, openAccountModal, openChainModal, openConnectModal, authenticationStatus, mounted }) => {
+                    {({ account, chain, openConnectModal, authenticationStatus, mounted }) => {
                       const ready = mounted && authenticationStatus !== 'loading';
                       const connected = ready && account && chain && (!authenticationStatus || authenticationStatus === 'authenticated');
 
                       return (
                         <div {...(!ready && { 'aria-hidden': true, 'style': { opacity: 0, pointerEvents: 'none' } })}>
-                          {(() => {
-                            if (!connected) {
-                              return (
-                                <button
-                                  onClick={openConnectModal}
-                                  type="button"
-                                  className="w-full bg-white text-gray-900 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50 transition-colors duration-200 shadow-lg"
-                                >
-                                  Connect Wallet
-                                </button>
-                              );
-                            }
-
-                            if (chain.unsupported) {
-                              return (
-                                <button onClick={openChainModal} type="button" className="w-full bg-red-500 text-white font-semibold py-4 px-6 rounded-lg hover:bg-red-600 transition-colors duration-200">
-                                  Wrong network
-                                </button>
-                              );
-                            }
-
-                            return (
-                              <div className="space-y-4">
-                                <button
-                                  onClick={openChainModal}
-                                  className="w-full bg-gray-800 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200 border border-gray-600"
-                                  type="button"
-                                >
-                                  {chain.hasIcon && (
-                                    <div className="flex items-center justify-center">
-                                      {chain.iconUrl && <img alt={chain.name ?? 'Chain icon'} src={chain.iconUrl} className="w-5 h-5 mr-2" />}
-                                      {chain.name}
-                                    </div>
-                                  )}
-                                </button>
-
-                                <button
-                                  onClick={openAccountModal}
-                                  type="button"
-                                  className="w-full bg-gray-800 text-white font-semibold py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors duration-200 border border-gray-600"
-                                >
-                                  {account.displayName}
-                                  {account.displayBalance ? ` (${account.displayBalance})` : ''}
-                                </button>
-                              </div>
-                            );
-                          })()}
+                          {!connected ? (
+                            <button
+                              onClick={openConnectModal}
+                              type="button"
+                              className="w-full bg-white text-gray-900 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50"
+                            >
+                              Connect Wallet
+                            </button>
+                          ) : (
+                            <div className="space-y-4">
+                              <p className="text-sm text-gray-300">✅ Wallet Connected</p>
+                              <button
+                                onClick={() => setCurrentStep('sign')}
+                                className="w-full bg-white text-gray-900 font-semibold py-4 px-6 rounded-lg hover:bg-gray-50"
+                              >
+                                Continue to Sign
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     }}
@@ -572,6 +495,35 @@ function WalletContent({ searchParams }: WalletPageProps) {
               <p className="text-center text-sm text-gray-400">
                 Redirecting to main page in 3 seconds...
               </p>
+            </div>
+          )}
+
+          {/* Error Step */}
+          {currentStep === 'error' && (
+            <div className="space-y-6">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold text-red-300 mb-4">❌ URL Signature Error</h2>
+                  <p className="text-red-300 mb-4">{errorMessage}</p>
+                  
+                  <div className="bg-red-500/20 rounded-lg p-4 mb-4">
+                    <h3 className="text-sm font-medium text-red-200 mb-2">Expected URL Format:</h3>
+                    <code className="text-xs text-red-100 bg-red-500/30 p-2 rounded block">
+                      /wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=12345
+                    </code>
+                  </div>
+
+                  <div className="bg-gray-700/50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">Quick Test URLs:</h3>
+                    <div className="space-y-2 text-xs text-gray-400">
+                      <div>🔗 <a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test123" className="text-blue-400 hover:text-blue-300">Swap 1 ETH to USDC</a></div>
+                      <div>🔗 <a href="/wallet?action=swap&fromToken=USDC&toToken=ETH&amount=100&nonce=test456" className="text-blue-400 hover:text-blue-300">Swap 100 USDC to ETH</a></div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-400 mt-4">Redirecting to home page in 5 seconds...</p>
+                </div>
+              </div>
             </div>
           )}
 
