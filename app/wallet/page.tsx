@@ -142,6 +142,9 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
   useEffect(() => {
     if (isConfirmed && txHash) {
       setCurrentStep('success');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
     }
   }, [isConfirmed, txHash]);
 
@@ -159,6 +162,20 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
     }
 
     try {
+      // Convert amount to wei for ETH transactions
+      let transactionValue = BigInt(0);
+
+      if (action === 'swap' && fromToken.toLowerCase() === 'eth') {
+        // Convert decimal string to wei (multiply by 10^18)
+        const amountFloat = parseFloat(amount);
+        if (isNaN(amountFloat)) {
+          alert('Invalid amount format');
+          return;
+        }
+        transactionValue = BigInt(Math.floor(amountFloat * 10 ** 18));
+        console.log('🔢 Converted amount to wei:', transactionValue.toString());
+      }
+
       const mockSwapData = '0x7ff36ab5' +
         '0000000000000000000000000000000000000000000000000000000000000080' +
         '0000000000000000000000000000000000000000000000000000000000000002' +
@@ -166,10 +183,6 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
         '0000000000000000000000006b175474e89094c44da98b954eedeac495271d0f' +
         '0000000000000000000000000000000000000000000000000000000000000000' +
         'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
-
-      const transactionValue = action === 'swap' && fromToken.toLowerCase() === 'eth'
-        ? BigInt(amount) * BigInt(10 ** 18)
-        : BigInt(0);
 
       sendTransaction({
         to: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
