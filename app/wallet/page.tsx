@@ -293,10 +293,11 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
           return;
         }
 
-        // Validate chain
-        if (!CHAIN_CONFIGS[chainParam]) {
+        // Validate chain - ensure it exists in our configs
+        const supportedChains = Object.keys(CHAIN_CONFIGS);
+        if (!supportedChains.includes(chainParam)) {
           console.error('❌ Unsupported chain:', chainParam);
-          setErrorMessage(`Unsupported chain: ${chainParam}. Supported chains: ${Object.keys(CHAIN_CONFIGS).join(', ')}`);
+          setErrorMessage(`Unsupported chain: ${chainParam}. Supported chains: ${supportedChains.join(', ')}`);
           setCurrentStep('error');
           setIsInitialized(true);
           return;
@@ -497,11 +498,29 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
                     </pre>
                   </div>
 
+                  <div className="bg-red-500/20 rounded-lg p-4 mb-4">
+                    <h3 className="text-sm font-medium text-red-200 mb-2">Supported Chains:</h3>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {Object.entries(CHAIN_CONFIGS).map(([key, config]) => (
+                        <div key={key} className="flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${config.supported ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                          <span className="text-red-100">{config.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="bg-gray-700/50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-300 mb-2">🔗 Quick Test URLs:</h3>
+                    <h3 className="text-sm font-medium text-gray-300 mb-2">🔗 Test URLs for Supported Chains:</h3>
                     <div className="space-y-2 text-xs">
-                      <div><a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test123" className="text-blue-400 hover:text-blue-300 underline">Swap 1 ETH to USDC</a></div>
-                      <div><a href="/wallet?action=swap&fromToken=USDC&toToken=ETH&amount=100&nonce=test456" className="text-blue-400 hover:text-blue-300 underline">Swap 100 USDC to ETH</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test123&chain=ethereum" className="text-blue-400 hover:text-blue-300 underline">Ethereum - Swap 1 ETH to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=MATIC&toToken=USDC&amount=100&nonce=test124&chain=polygon" className="text-blue-400 hover:text-blue-300 underline">Polygon - Swap 100 MATIC to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test125&chain=arbitrum" className="text-blue-400 hover:text-blue-300 underline">Arbitrum - Swap 1 ETH to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test126&chain=optimism" className="text-blue-400 hover:text-blue-300 underline">Optimism - Swap 1 ETH to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=1&nonce=test127&chain=base" className="text-blue-400 hover:text-blue-300 underline">Base - Swap 1 ETH to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=BNB&toToken=USDC&amount=1&nonce=test128&chain=bnb" className="text-blue-400 hover:text-blue-300 underline">BNB Chain - Swap 1 BNB to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=AVAX&toToken=USDC&amount=10&nonce=test129&chain=avalanche" className="text-blue-400 hover:text-blue-300 underline">Avalanche - Swap 10 AVAX to USDC</a></div>
+                      <div><a href="/wallet?action=swap&fromToken=CELO&toToken=cUSD&amount=50&nonce=test130&chain=celo" className="text-blue-400 hover:text-blue-300 underline">Celo - Swap 50 CELO to cUSD</a></div>
                     </div>
                   </div>
                 </div>
