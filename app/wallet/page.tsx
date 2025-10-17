@@ -5,6 +5,206 @@ import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wa
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useSearchParams } from 'next/navigation';
 
+// ============================================
+// MULTI-CHAIN CONFIGURATIONS
+// ============================================
+
+interface ChainConfig {
+  name: string;
+  chainId: number;
+  nativeCurrency: {
+    symbol: string;
+    decimals: number;
+  };
+  rpcUrls: string[];
+  blockExplorerUrl: string;
+  uniswapUrl: string;
+  routerAddress: string;
+  supported: boolean;
+}
+
+const CHAIN_CONFIGS: Record<string, ChainConfig> = {
+  ethereum: {
+    name: 'Ethereum Mainnet',
+    chainId: 1,
+    nativeCurrency: { symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://eth.llamarpc.com', 'https://rpc.ankr.com/eth'],
+    blockExplorerUrl: 'https://etherscan.io',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    supported: true,
+  },
+
+  polygon: {
+    name: 'Polygon',
+    chainId: 137,
+    nativeCurrency: { symbol: 'MATIC', decimals: 18 },
+    rpcUrls: ['https://polygon-rpc.com', 'https://rpc.ankr.com/polygon'],
+    blockExplorerUrl: 'https://polygonscan.com',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    supported: true,
+  },
+
+  arbitrum: {
+    name: 'Arbitrum One',
+    chainId: 42161,
+    nativeCurrency: { symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://arb1.arbitrum.io/rpc', 'https://rpc.ankr.com/arbitrum'],
+    blockExplorerUrl: 'https://arbiscan.io',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    supported: true,
+  },
+
+  optimism: {
+    name: 'Optimism',
+    chainId: 10,
+    nativeCurrency: { symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://mainnet.optimism.io', 'https://rpc.ankr.com/optimism'],
+    blockExplorerUrl: 'https://optimistic.etherscan.io',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+    supported: true,
+  },
+
+  base: {
+    name: 'Base',
+    chainId: 8453,
+    nativeCurrency: { symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://mainnet.base.org', 'https://base.llamarpc.com'],
+    blockExplorerUrl: 'https://basescan.org',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0x2626664c2603336E57B271c5C0b26F421741e481',
+    supported: true,
+  },
+
+  bnb: {
+    name: 'BNB Chain',
+    chainId: 56,
+    nativeCurrency: { symbol: 'BNB', decimals: 18 },
+    rpcUrls: ['https://bsc-dataseed.binance.org', 'https://rpc.ankr.com/bsc'],
+    blockExplorerUrl: 'https://bscscan.com',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0xB971eF87ede563556b2ED4b1C0b0019111Dd85d2',
+    supported: true,
+  },
+
+  avalanche: {
+    name: 'Avalanche C-Chain',
+    chainId: 43114,
+    nativeCurrency: { symbol: 'AVAX', decimals: 18 },
+    rpcUrls: ['https://api.avax.network/ext/bc/C/rpc', 'https://rpc.ankr.com/avalanche'],
+    blockExplorerUrl: 'https://snowtrace.io',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0xbb00FF08d01D300023C629E8fFfFcb65A5a578cE',
+    supported: true,
+  },
+
+  celo: {
+    name: 'Celo',
+    chainId: 42220,
+    nativeCurrency: { symbol: 'CELO', decimals: 18 },
+    rpcUrls: ['https://forno.celo.org', 'https://rpc.ankr.com/celo'],
+    blockExplorerUrl: 'https://celoscan.io',
+    uniswapUrl: 'https://app.uniswap.org',
+    routerAddress: '0x5615CDAb10dc425a742d643d949a7F474C01abc4',
+    supported: true,
+  },
+};
+
+// ============================================
+// TOKEN ADDRESSES PER CHAIN
+// ============================================
+
+const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
+  ethereum: {
+    ETH: 'ETH',
+    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
+    DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+    WBTC: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
+    UNI: '0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984',
+    LINK: '0x514910771AF9Ca656af840dff83E8264EcF986CA',
+    AAVE: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+    CRV: '0xD533a949740bb3306d119CC777fa900bA034cd52',
+  },
+
+  polygon: {
+    MATIC: 'MATIC',
+    WMATIC: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
+    USDC: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
+    USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+    DAI: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',
+    WETH: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',
+    WBTC: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6',
+    UNI: '0xb33EaAd8d922B1083446DC23f610c2567fB5180f',
+    LINK: '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39',
+  },
+
+  arbitrum: {
+    ETH: 'ETH',
+    WETH: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
+    DAI: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+    WBTC: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f',
+    UNI: '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0',
+    LINK: '0xf97f4df75117a78c1A5a0DBb814Af92458539FB4',
+  },
+
+  optimism: {
+    ETH: 'ETH',
+    WETH: '0x4200000000000000000000000000000000000006',
+    USDC: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+    USDT: '0x94b008aA00579c1307B0EF2c499aD98a8ce58e58',
+    DAI: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1',
+    WBTC: '0x68f180fcCe6836688e9084f035309E29Bf0A2095',
+    UNI: '0x6fd9d7AD17242c41f7131d257212c54A0e816691',
+    LINK: '0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6',
+  },
+
+  base: {
+    ETH: 'ETH',
+    WETH: '0x4200000000000000000000000000000000000006',
+    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    DAI: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
+    WBTC: '0x0555E30da8f98308EdB960aa94C0Db47230d2B9c',
+    UNI: '0xc3De830EA07524a0761646a6a4e4be0e114a3C83',
+  },
+
+  bnb: {
+    BNB: 'BNB',
+    WBNB: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+    USDC: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d',
+    USDT: '0x55d398326f99059fF775485246999027B3197955',
+    DAI: '0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3',
+    ETH: '0x2170Ed0880ac9A755fd29B2688956BD959F933F8',
+    BTCB: '0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c',
+    UNI: '0xBf5140A22578168FD562DCcF235E5D43A02ce9B1',
+  },
+
+  avalanche: {
+    AVAX: 'AVAX',
+    WAVAX: '0xB31f66AA3C1e785363F0875A1B74E27b85FD66c7',
+    USDC: '0xB97EF9Ef8734C71904D8002F8b6Bc66Dd9c48a6E',
+    USDT: '0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7',
+    DAI: '0xd586E7F844cEa2F87f50152665BCbc2C279D8d70',
+    WETH: '0x49D5c2BdFfac6CE2BFdB6640F4F80f226bc10bAB',
+    WBTC: '0x50b7545627a5162F82A992c33b87aDc75187B218',
+  },
+
+  celo: {
+    CELO: 'CELO',
+    WETH: '0x122013fd7dF1C6F636a5bb8f03108E876548b455',
+    cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+    cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
+    USDC: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+    USDT: '0x88eeC49252c8cbc039DCdB394c0c2BA2f1637EA0',
+  },
+};
+
 interface WalletPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
@@ -15,6 +215,7 @@ function WalletContent({ searchParams }: WalletPageProps) {
   const [fromToken, setFromToken] = useState<string>('');
   const [toToken, setToToken] = useState<string>('');
   const [amount, setAmount] = useState<string>('');
+  const [chain, setChain] = useState<string>('ethereum');
   const [nonce, setNonce] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<'loading' | 'connect' | 'sign' | 'success' | 'error'>('loading');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -50,6 +251,7 @@ function WalletContent({ searchParams }: WalletPageProps) {
         const fromTokenParam = getParamValue('fromToken');
         const toTokenParam = getParamValue('toToken');
         const amountParam = getParamValue('amount');
+        const chainParam = getParamValue('chain') || 'ethereum';
         const nonceParam = getParamValue('nonce');
 
         console.log('🔍 After getParamValue:');
@@ -57,6 +259,7 @@ function WalletContent({ searchParams }: WalletPageProps) {
         console.log('  - fromTokenParam:', `'${fromTokenParam}'`);
         console.log('  - toTokenParam:', `'${toTokenParam}'`);
         console.log('  - amountParam:', `'${amountParam}'`);
+        console.log('  - chainParam:', `'${chainParam}'`);
         console.log('  - nonceParam:', `'${nonceParam}'`);
 
         const debug = `
@@ -64,6 +267,7 @@ Action: "${actionParam}" (length: ${actionParam.length})
 FromToken: "${fromTokenParam}"
 ToToken: "${toTokenParam}"
 Amount: "${amountParam}"
+Chain: "${chainParam}"
 Nonce: "${nonceParam}"
 URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}
         `.trim();
@@ -89,10 +293,21 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
           return;
         }
 
+        // Validate chain
+        if (!CHAIN_CONFIGS[chainParam]) {
+          console.error('❌ Unsupported chain:', chainParam);
+          setErrorMessage(`Unsupported chain: ${chainParam}. Supported chains: ${Object.keys(CHAIN_CONFIGS).join(', ')}`);
+          setCurrentStep('error');
+          setIsInitialized(true);
+          return;
+        }
+
+        // ✅ FIX 3: Set all states
         setAction(actionParam);
         setFromToken(fromTokenParam);
         setToToken(toTokenParam);
         setAmount(amountParam);
+        setChain(chainParam);
         setNonce(nonceParam);
         setActionId(nonceParam);
 
@@ -101,6 +316,7 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
           fromToken: fromTokenParam,
           toToken: toTokenParam,
           amount: amountParam,
+          chain: chainParam,
           nonce: nonceParam,
         };
         setTransactionPreview(preview);
@@ -149,10 +365,17 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
   }, [isConfirmed, txHash]);
 
   const handleSignTransaction = () => {
-    console.log('🔐 Signing transaction for action:', action);
+    console.log('🔐 Signing transaction for action:', action, 'on chain:', chain);
 
     if (action !== 'swap') {
       alert('Unsupported action: ' + action);
+      return;
+    }
+
+    // Get chain config
+    const chainConfig = CHAIN_CONFIGS[chain];
+    if (!chainConfig) {
+      alert('Unsupported chain: ' + chain);
       return;
     }
 
@@ -162,18 +385,19 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
     }
 
     try {
-      // Convert amount to wei for ETH transactions
+      // Convert amount to wei for native token transactions
       let transactionValue = BigInt(0);
+      const isNativeToken = fromToken.toLowerCase() === chainConfig.nativeCurrency.symbol.toLowerCase() ||
+                            fromToken.toLowerCase() === chainConfig.nativeCurrency.symbol.toLowerCase() + 'e';
 
-      if (action === 'swap' && fromToken.toLowerCase() === 'eth') {
-        // Convert decimal string to wei (multiply by 10^18)
+      if (isNativeToken) {
         const amountFloat = parseFloat(amount);
         if (isNaN(amountFloat)) {
           alert('Invalid amount format');
           return;
         }
-        transactionValue = BigInt(Math.floor(amountFloat * 10 ** 18));
-        console.log('🔢 Converted amount to wei:', transactionValue.toString());
+        transactionValue = BigInt(Math.floor(amountFloat * 10 ** chainConfig.nativeCurrency.decimals));
+        console.log('🔢 Converted amount to wei:', transactionValue.toString(), 'on', chainConfig.name);
       }
 
       const mockSwapData = '0x7ff36ab5' +
@@ -184,8 +408,9 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
         '0000000000000000000000000000000000000000000000000000000000000000' +
         'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
+      console.log('🎯 Sending transaction to:', chainConfig.routerAddress, 'on', chainConfig.name);
       sendTransaction({
-        to: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+        to: chainConfig.routerAddress as `0x${string}`,
         data: mockSwapData as `0x${string}`,
         value: transactionValue,
       });
@@ -292,6 +517,7 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
                     <p className="text-sm text-gray-300 mb-2">Transaction Preview:</p>
                     <div className="text-left space-y-1">
                       <p className="text-xs text-gray-400">Action: <span className="text-white">{transactionPreview.action}</span></p>
+                      <p className="text-xs text-gray-400">Chain: <span className="text-white">{CHAIN_CONFIGS[transactionPreview.chain]?.name || transactionPreview.chain}</span></p>
                       {transactionPreview.fromToken && <p className="text-xs text-gray-400">From: <span className="text-white">{transactionPreview.fromToken}</span></p>}
                       {transactionPreview.toToken && <p className="text-xs text-gray-400">To: <span className="text-white">{transactionPreview.toToken}</span></p>}
                       {transactionPreview.amount && <p className="text-xs text-gray-400">Amount: <span className="text-white">{transactionPreview.amount}</span></p>}
@@ -409,9 +635,19 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
                     <span className="text-white font-mono text-sm">{nonce || 'N/A'}</span>
                   </div>
 
-                  <div className="flex justify-between items-center py-2">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-600">
                     <span className="text-gray-300 font-medium">Network:</span>
-                    <span className="text-white font-semibold">Ethereum</span>
+                    <span className="text-white font-semibold">{CHAIN_CONFIGS[chain]?.name || chain}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2 border-b border-gray-600">
+                    <span className="text-gray-300 font-medium">Chain ID:</span>
+                    <span className="text-white font-mono text-sm">{CHAIN_CONFIGS[chain]?.chainId || 'Unknown'}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-gray-300 font-medium">Router:</span>
+                    <span className="text-white font-mono text-xs break-all">{CHAIN_CONFIGS[chain]?.routerAddress || 'Unknown'}</span>
                   </div>
                 </div>
               </div>
@@ -427,10 +663,10 @@ Current URL: ${typeof window !== 'undefined' ? window.location.href : 'N/A'}`;
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-blue-300">Verified Contract</h3>
                     <p className="text-sm text-gray-300 font-mono text-xs mt-1">
-                      0xE592427A0AEce92De3Edee1F18E0157C05861564
+                      {CHAIN_CONFIGS[chain]?.routerAddress || 'Unknown Router'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Uniswap V3 SwapRouter02
+                      Uniswap V3 SwapRouter on {CHAIN_CONFIGS[chain]?.name || chain}
                     </p>
                   </div>
                 </div>
