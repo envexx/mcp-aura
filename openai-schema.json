@@ -511,9 +511,9 @@
           },
           "chain": {
             "type": "string",
-            "enum": ["ethereum", "arbitrum", "polygon"],
+            "enum": ["ethereum", "polygon", "arbitrum", "optimism", "base", "bnb", "avalanche", "celo"],
             "description": "Blockchain network",
-            "example": "ethereum"
+            "example": "base"
           },
           "platform": {
             "type": "string",
