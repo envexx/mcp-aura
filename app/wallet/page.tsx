@@ -59,16 +59,19 @@ function WalletContent({ searchParams }: WalletPageProps) {
             validatedActionParam,
             url: window.location.href
           });
-          alert('No action specified in URL. Please check the link and try again.');
-          // Add a small delay before redirect to allow user to see the alert
+          // Temporarily remove alert for debugging - show error in console only
+          console.error('🚨 WALLET ERROR: No action specified in URL. Please check the link and try again.');
+          // Add a small delay before redirect to allow debugging
           setTimeout(() => {
+            console.log('🔄 Redirecting to home page...');
             window.location.href = '/';
           }, 2000);
         }
       } catch (error) {
         console.error('Wallet Page Error: Failed to parse URL parameters', error);
-        alert('Error loading wallet page. Please try again.');
+        console.error('🚨 WALLET ERROR: Error loading wallet page. Please try again.');
         setTimeout(() => {
+          console.log('🔄 Redirecting to home page due to error...');
           window.location.href = '/';
         }, 2000);
       }
