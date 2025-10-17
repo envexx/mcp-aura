@@ -25,47 +25,52 @@ function WalletContent({ searchParams }: WalletPageProps) {
 
   useEffect(() => {
     const init = async () => {
-      const params = await searchParams;
+      try {
+        const params = await searchParams;
 
-      console.log('🔍 Wallet Page Debug - Raw searchParams:', params);
-      console.log('🔍 Wallet Page Debug - typeof params:', typeof params);
-      console.log('🔍 Wallet Page Debug - params keys:', Object.keys(params || {}));
+        // Parse URL parameters for deep link with additional safety checks
+        const actionParam = params?.action;
+        const fromTokenParam = params?.fromToken;
+        const toTokenParam = params?.toToken;
+        const amountParam = params?.amount;
+        const nonceParam = params?.nonce;
 
-      // Parse URL parameters for deep link
-      const actionParam = typeof params.action === 'string' ? params.action : '';
-      const fromTokenParam = typeof params.fromToken === 'string' ? params.fromToken : '';
-      const toTokenParam = typeof params.toToken === 'string' ? params.toToken : '';
-      const amountParam = typeof params.amount === 'string' ? params.amount : '';
-      const nonceParam = typeof params.nonce === 'string' ? params.nonce : '';
+        // Additional validation - ensure actionParam is a non-empty string
+        const validatedActionParam = (typeof actionParam === 'string' && actionParam.trim().length > 0) ? actionParam.trim() : '';
 
-      console.log('🔍 Wallet Page Debug - Parsed params:', {
-        actionParam,
-        fromTokenParam,
-        toTokenParam,
-        amountParam,
-        nonceParam
-      });
-      console.log('🔍 Wallet Page Debug - actionParam type:', typeof actionParam, 'value:', actionParam);
+        setAction(validatedActionParam);
+        setFromToken(typeof fromTokenParam === 'string' ? fromTokenParam : '');
+        setToToken(typeof toTokenParam === 'string' ? toTokenParam : '');
+        setAmount(typeof amountParam === 'string' ? amountParam : '');
+        setNonce(typeof nonceParam === 'string' ? nonceParam : '');
+        setActionId(typeof nonceParam === 'string' ? nonceParam : '');
 
-      setAction(actionParam);
-      setFromToken(fromTokenParam);
-      setToToken(toTokenParam);
-      setAmount(amountParam);
-      setNonce(nonceParam);
-      setActionId(nonceParam); // Use nonce as actionId
-
-      // Determine next step based on connection status
-      if (actionParam) {
-        console.log('✅ Wallet Page Debug - Action parameter found, proceeding to wallet flow');
-        if (isConnected) {
-          setCurrentStep('sign');
+        // Determine next step based on connection status
+        if (validatedActionParam) {
+          if (isConnected) {
+            setCurrentStep('sign');
+          } else {
+            setCurrentStep('connect');
+          }
         } else {
-          setCurrentStep('connect');
+          console.error('Wallet Page Error: No valid action specified in URL', {
+            rawParams: params,
+            actionParam,
+            validatedActionParam,
+            url: window.location.href
+          });
+          alert('No action specified in URL. Please check the link and try again.');
+          // Add a small delay before redirect to allow user to see the alert
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
         }
-      } else {
-        console.log('❌ Wallet Page Debug - No action parameter found, redirecting');
-        alert('No action specified in URL');
-        window.location.href = '/';
+      } catch (error) {
+        console.error('Wallet Page Error: Failed to parse URL parameters', error);
+        alert('Error loading wallet page. Please try again.');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
       }
     };
     init();
