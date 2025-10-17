@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useSearchParams } from 'next/navigation';
 
 interface WalletPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -25,6 +26,7 @@ function WalletContent({ searchParams }: WalletPageProps) {
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
   });
+  const searchParamsHook = useSearchParams();
 
   useEffect(() => {
     let isMounted = true;
@@ -33,20 +35,29 @@ function WalletContent({ searchParams }: WalletPageProps) {
       try {
         console.log('🔍 Initializing wallet page...');
 
-        const params = await searchParams;
-        console.log('📦 Raw searchParams:', params);
+        // ✅ FIX 1: Use useSearchParams hook for reliable parsing
+        console.log('📦 searchParamsHook:', searchParamsHook);
+        console.log('📦 searchParamsHook type:', typeof searchParamsHook);
 
-        const getParamValue = (param: any): string => {
-          if (typeof param === 'string') return param.trim();
-          if (Array.isArray(param) && param.length > 0) return String(param[0]).trim();
-          return '';
+        // Helper function untuk extract string value
+        const getParamValue = (key: string): string => {
+          const value = searchParamsHook?.get(key);
+          console.log(`🔍 getParamValue(${key}):`, value, 'type:', typeof value);
+          return value ? value.trim() : '';
         };
 
-        const actionParam = getParamValue(params?.action);
-        const fromTokenParam = getParamValue(params?.fromToken);
-        const toTokenParam = getParamValue(params?.toToken);
-        const amountParam = getParamValue(params?.amount);
-        const nonceParam = getParamValue(params?.nonce);
+        const actionParam = getParamValue('action');
+        const fromTokenParam = getParamValue('fromToken');
+        const toTokenParam = getParamValue('toToken');
+        const amountParam = getParamValue('amount');
+        const nonceParam = getParamValue('nonce');
+
+        console.log('🔍 After getParamValue:');
+        console.log('  - actionParam:', `'${actionParam}'`);
+        console.log('  - fromTokenParam:', `'${fromTokenParam}'`);
+        console.log('  - toTokenParam:', `'${toTokenParam}'`);
+        console.log('  - amountParam:', `'${amountParam}'`);
+        console.log('  - nonceParam:', `'${nonceParam}'`);
 
         const debug = `
 Action: "${actionParam}" (length: ${actionParam.length})
