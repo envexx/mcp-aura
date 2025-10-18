@@ -7,7 +7,7 @@ const transferSchema = z.object({
   toAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid to address'),
   token: z.string().min(1, 'Token is required'),
   amount: z.string().min(1, 'Amount is required'),
-  network: z.enum(['ethereum', 'arbitrum', 'polygon']),
+  network: z.enum(['ethereum', 'polygon', 'arbitrum', 'optimism', 'base', 'bnb', 'avalanche', 'celo']),
   memo: z.string().optional(),
 });
 
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const transferId = searchParams.get('transferId');
     const txHash = searchParams.get('txHash');
-    const network = searchParams.get('network') as 'ethereum' | 'arbitrum' | 'polygon';
+    const network = searchParams.get('network') as 'ethereum' | 'polygon' | 'arbitrum' | 'optimism' | 'base' | 'bnb' | 'avalanche' | 'celo';
 
     if (!txHash || !network) {
       return NextResponse.json(
@@ -218,8 +218,13 @@ export async function OPTIONS(request: NextRequest) {
 function getExplorerUrl(network: string, txHash: string): string {
   const explorers = {
     ethereum: 'https://etherscan.io/tx/',
+    polygon: 'https://polygonscan.com/tx/',
     arbitrum: 'https://arbiscan.io/tx/',
-    polygon: 'https://polygonscan.com/tx/'
+    optimism: 'https://optimistic.etherscan.io/tx/',
+    base: 'https://basescan.org/tx/',
+    bnb: 'https://bscscan.com/tx/',
+    avalanche: 'https://snowtrace.io/tx/',
+    celo: 'https://celoscan.io/tx/'
   };
 
   return `${explorers[network as keyof typeof explorers]}${txHash}`;

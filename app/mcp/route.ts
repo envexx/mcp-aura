@@ -282,7 +282,7 @@ const handler = createMcpHandler(async (server) => {
         tokenIn: z.string().describe("Input token symbol or address"),
         tokenOut: z.string().describe("Output token symbol or address"),
         amountIn: z.string().describe("Amount to swap/stake/bridge"),
-        network: z.enum(["ethereum", "arbitrum", "polygon"]).describe("Blockchain network"),
+        network: z.enum(["ethereum", "polygon", "arbitrum", "optimism", "base", "bnb", "avalanche", "celo"]).describe("Blockchain network"),
         slippage: z.string().optional().describe("Slippage tolerance (default: 0.5%)"),
       },
     },
@@ -352,7 +352,7 @@ const handler = createMcpHandler(async (server) => {
         toAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).describe("Recipient wallet address"),
         token: z.string().describe("Token symbol or address to transfer"),
         amount: z.string().describe("Amount to transfer"),
-        network: z.enum(["ethereum", "arbitrum", "polygon"]).describe("Blockchain network"),
+        network: z.enum(["ethereum", "polygon", "arbitrum", "optimism", "base", "bnb", "avalanche", "celo"]).describe("Blockchain network"),
         memo: z.string().optional().describe("Optional memo for the transfer"),
       },
     },
@@ -419,7 +419,7 @@ const handler = createMcpHandler(async (server) => {
       title: "Estimate Transaction Fees",
       description: "Get real-time gas fee estimates for different types of transactions across networks",
       inputSchema: {
-        network: z.enum(["ethereum", "arbitrum", "polygon"]).describe("Blockchain network"),
+        network: z.enum(["ethereum", "polygon", "arbitrum", "optimism", "base", "bnb", "avalanche", "celo"]).describe("Blockchain network"),
         operation: z.enum(["swap", "transfer", "stake", "bridge"]).describe("Type of operation"),
         tokenAddress: z.string().optional().describe("Token contract address (for ERC20 transfers)"),
       },
@@ -429,8 +429,13 @@ const handler = createMcpHandler(async (server) => {
         // Mock fee estimation - in production, this would call actual gas estimation APIs
         const baseFees = {
           ethereum: { swap: '0.015', transfer: '0.005', stake: '0.02', bridge: '0.03' },
+          polygon: { swap: '0.01', transfer: '0.005', stake: '0.015', bridge: '0.02' },
           arbitrum: { swap: '0.002', transfer: '0.001', stake: '0.003', bridge: '0.005' },
-          polygon: { swap: '0.01', transfer: '0.005', stake: '0.015', bridge: '0.02' }
+          optimism: { swap: '0.003', transfer: '0.001', stake: '0.004', bridge: '0.006' },
+          base: { swap: '0.001', transfer: '0.0005', stake: '0.002', bridge: '0.003' },
+          bnb: { swap: '0.005', transfer: '0.002', stake: '0.01', bridge: '0.015' },
+          avalanche: { swap: '0.01', transfer: '0.005', stake: '0.015', bridge: '0.02' },
+          celo: { swap: '0.01', transfer: '0.005', stake: '0.015', bridge: '0.02' }
         };
 
         const feeETH = baseFees[network][operation];
@@ -475,7 +480,7 @@ const handler = createMcpHandler(async (server) => {
       description: "Check the status of a blockchain transaction and get confirmation details",
       inputSchema: {
         txHash: z.string().describe("Transaction hash to check"),
-        network: z.enum(["ethereum", "arbitrum", "polygon"]).describe("Blockchain network"),
+        network: z.enum(["ethereum", "polygon", "arbitrum", "optimism", "base", "bnb", "avalanche", "celo"]).describe("Blockchain network"),
       },
     },
     async ({ txHash, network }) => {

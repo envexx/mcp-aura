@@ -121,7 +121,7 @@ const TOKEN_MAP = {
   base: {
     'ETH': '0x0000000000000000000000000000000000000000',
     'WETH': '0x4200000000000000000000000000000000000006',
-    'USDC': '0xd9Aa342a7cA20616bB0b20b79A1e0A5726b2b206',
+    'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     'DAI': '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb',
     'WBTC': '0x0555E30da8f98308EdB960aa94C0Db47230d2B9c',
     'UNI': '0xc3De830EA07524a0761646a6a4e4be0e114a3C83'
@@ -202,8 +202,8 @@ function testBaseConfiguration() {
   }
   console.log('✅ ETH address correct');
 
-  if (baseTokens.USDC.toLowerCase() !== '0xd9aa342a7ca20616bb0b20b79a1e0a5726b2b206') {
-    throw new Error(`❌ Incorrect USDC address. Expected: 0xd9Aa342a7cA20616bB0b20b79A1e0A5726b2b206, Got: ${baseTokens.USDC}`);
+  if (baseTokens.USDC.toLowerCase() !== '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913') {
+    throw new Error(`❌ Incorrect USDC address. Expected: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, Got: ${baseTokens.USDC}`);
   }
   console.log('✅ USDC address correct');
 
