@@ -1,10 +1,41 @@
-# Smart Chatbot Onchain MCP AURA by ENVXX
+<div align="center">
+  <img src="Aura.png" alt="ENVXX MCP AURA Logo" width="120" height="120">
+  <br>
+  <h1>Smart Chatbot Onchain</h1>
+  <h2>MCP AURA by ENVEXX</h2>
+  <p><em>AI-Powered DeFi Portfolio Management & Automation</em></p>
+  <br>
+  <p>
+    <a href="#installation">Get Started</a> •
+    <a href="#api-endpoints">API Docs</a> •
+    <a href="#deployment">Deploy</a> •
+    <a href="#support">Support</a>
+  </p>
+  <br>
+</div>
 
-An advanced Next.js application demonstrating AI-powered DeFi portfolio management using the [OpenAI Apps SDK](https://developers.openai.com/apps-sdk) with MCP server integration and AURA API for Web3 automation.
+---
 
-## Overview
+## 🚀 Overview
 
-This project demonstrates the **Smart Chatbot Onchain MCP AURA** system built by **ENVXX** - an AI-powered DeFi assistant that integrates AdEx AURA API to provide intelligent Web3 portfolio management through ChatGPT. The system includes comprehensive MCP tools for portfolio analysis, strategy recommendations, and automated DeFi operations across multiple blockchains.
+**ENVEXX MCP AURA** is an advanced AI-powered DeFi assistant that integrates with ChatGPT through the Model Context Protocol (MCP). Built for intelligent Web3 portfolio management, it provides seamless DeFi operations across multiple blockchains with automated trading, yield farming, and portfolio analytics.
+
+### ✨ Key Features
+
+- 🤖 **AI-Powered Chat Interface** - Natural language DeFi interactions
+- 📊 **Multi-Chain Portfolio Analysis** - Real-time holdings across Ethereum, Polygon, Arbitrum, and more
+- ⚡ **One-Click Execution** - Automated swaps, stakes, and transfers
+- 🎯 **Strategy Recommendations** - AI-driven yield farming and investment strategies
+- 🔒 **Non-Custodial Security** - User maintains full control of private keys
+- 🌐 **Cross-Chain Support** - Unified operations across major blockchains
+
+### 🏗️ Architecture
+
+This project demonstrates the **OpenAI Apps SDK** integration with MCP server, featuring:
+- **Tool Registration** with ChatGPT-specific metadata
+- **Resource Registration** for iframe widget rendering
+- **Cross-Origin RSC** handling for seamless navigation
+- **Wallet Integration** with RainbowKit
 
 ## Key Components
 
@@ -76,25 +107,44 @@ The `<NextChatSDKBootstrap>` component patches browser APIs to work correctly wi
 
 **Note:** `suppressHydrationWarning` is currently required because ChatGPT modifies the initial HTML before the Next.js app hydrates, causing hydration mismatches.
 
-## Getting Started
+## 🛠️ Installation
 
-### Installation
+### Prerequisites
+- Node.js 18+
+- npm or pnpm
+- Git
+
+### Quick Start
 
 ```bash
+# Clone the repository
+git clone https://github.com/envxx/mcp-aura.git
+cd mcp-aura
+
+# Install dependencies
 npm install
-# or
-pnpm install
-```
 
-### Development
-
-```bash
+# Start development server
 npm run dev
-# or
-pnpm dev
+
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the app.
+### Environment Setup
+
+Create a `.env.local` file with required API keys:
+
+```env
+# AURA API Configuration
+AURA_API_KEY=your_aura_api_key
+AURA_API_SECRET=your_aura_api_secret
+
+# Optional: Additional RPC endpoints
+ETHEREUM_RPC_URL=https://mainnet.infura.io/v3/YOUR_PROJECT_ID
+POLYGON_RPC_URL=https://polygon-mainnet.infura.io/v3/YOUR_PROJECT_ID
+```
+
+## 🔧 Configuration
 
 ### Testing the MCP Server
 
@@ -132,21 +182,21 @@ next.config.ts            # Asset prefix configuration
 4. **Client Hydration**: Next.js hydrates the app inside the iframe with patched APIs
 5. **Navigation**: Client-side navigation uses patched `fetch` to load RSC payloads
 
-## 📡 API Endpoints Documentation
-
-ENVXX MCP AURA provides a comprehensive REST API for DeFi operations that can be integrated into any project.
+## 📡 API Endpoints
 
 ### Base URL
 ```
-https://your-deployment-url.vercel.app
+https://your-deployment-url.vercel.app/api
 ```
 
-### 1. Execute DeFi Actions
-Execute DeFi operations like swaps, stakes, and bridges.
+### 🔄 DeFi Actions
 
-**Endpoint:** `POST /api/mcp/action`
+#### Execute Swap/Stake/Bridge
+```http
+POST /mcp/action
+```
 
-**Request Body:**
+**Request:**
 ```json
 {
   "fromAddress": "0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c",
@@ -160,485 +210,98 @@ Execute DeFi operations like swaps, stakes, and bridges.
 }
 ```
 
-**Supported Actions:**
-- `swap` - Token swaps
-- `stake` - Staking operations
-- `bridge` - Cross-chain transfers
+**Supported Actions:** `swap`, `stake`, `bridge`
+**Supported Chains:** `ethereum`, `polygon`, `arbitrum`, `optimism`, `base`, `bnb`, `avalanche`, `celo`
 
-**Supported Networks:**
-- `ethereum` - Ethereum Mainnet
-- `polygon` - Polygon (MATIC)
-- `arbitrum` - Arbitrum One
-- `optimism` - Optimism
-- `base` - Base Network
-- `bnb` - BNB Smart Chain
-- `avalanche` - Avalanche C-Chain
-- `celo` - Celo Network
+### 📊 Portfolio Analysis
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "actionId": "action_1760737166033_ij23sjjql",
-    "operation": "swap",
-    "details": {
-      "fromToken": "ETH",
-      "toToken": "USDC",
-      "amount": "0.001",
-      "chain": "base",
-      "estimatedCompletion": "2–5 minutes"
-    }
-  }
-}
+#### Get Portfolio Data
+```http
+GET /mcp/portfolio?address={address}&chains={chains}
 ```
-
-### 2. Portfolio Analysis
-Get detailed portfolio analytics and holdings.
-
-**Endpoint:** `GET /api/mcp/portfolio`
-
-**Query Parameters:**
-- `address` - Wallet address (required)
-- `chains` - Comma-separated list of chains (optional)
 
 **Example:**
 ```bash
-curl "https://your-deployment-url.vercel.app/api/mcp/portfolio?address=0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c&chains=ethereum,base"
+curl "https://api.envxx.dev/mcp/portfolio?address=0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c&chains=ethereum,base"
 ```
 
-**Response:**
+### 🎯 Strategy Recommendations
+
+#### Get AI Strategies
+```http
+GET /mcp/strategy?address={address}&risk={risk}
+```
+
+**Risk Levels:** `low`, `medium`, `high`
+
+### 💸 Token Transfer
+
+#### Transfer Tokens
+```http
+POST /mcp/transfer
+```
+
+**Request:**
 ```json
 {
-  "address": "0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c",
-  "totalValue": 1250.50,
-  "chains": [
-    {
-      "name": "ethereum",
-      "value": 850.25,
-      "tokens": [
-        {
-          "symbol": "ETH",
-          "balance": 0.5,
-          "value": 850.25
-        }
-      ]
-    },
-    {
-      "name": "base",
-      "value": 400.25,
-      "tokens": [
-        {
-          "symbol": "USDC",
-          "balance": 400.0,
-          "value": 400.25
-        }
-      ]
-    }
-  ],
-  "defiPositions": [
-    {
-      "protocol": "Uniswap V3",
-      "type": "liquidity_provision",
-      "value": 1200.00,
-      "apy": 12.5
-    }
-  ]
-}
-```
-
-### 3. Strategy Recommendations
-Get AI-powered investment strategies and recommendations.
-
-**Endpoint:** `GET /api/mcp/strategy`
-
-**Query Parameters:**
-- `address` - Wallet address (required)
-- `risk` - Risk tolerance: `low`, `medium`, `high` (optional)
-
-**Example:**
-```bash
-curl "https://your-deployment-url.vercel.app/api/mcp/strategy?address=0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c&risk=medium"
-```
-
-**Response:**
-```json
-{
-  "address": "0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c",
-  "strategies": [
-    {
-      "id": "aura-yield-eth-usdc",
-      "name": "ETH-USDC Yield Farming",
-      "protocol": "Aave",
-      "apy": 8.5,
-      "risk": "medium",
-      "tvl": 50000000,
-      "description": "Provide liquidity to ETH-USDC pool on Aave for stable yield"
-    }
-  ]
-}
-```
-
-### 4. Token Transfer
-Transfer tokens between wallets with fee estimation.
-
-**Endpoint:** `POST /api/mcp/transfer`
-
-**Request Body:**
-```json
-{
-  "fromAddress": "0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c",
-  "toAddress": "0x742d35Cc6634C0532925a3b8D8C9C8C8C8C8C8C8",
+  "fromAddress": "0x...",
+  "toAddress": "0x...",
   "token": "USDC",
   "amount": "100.0",
   "chain": "ethereum"
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "transactionHash": "0x...",
-  "estimatedGas": 65000,
-  "gasFee": 0.002
-}
-```
+## 🚀 Deployment
 
-### 5. Transaction Signing
-Generate transaction data for wallet signing.
+### One-Click Deploy
 
-**Endpoint:** `POST /api/mcp/sign-request`
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/envxx/mcp-aura)
 
-**Request Body:**
-```json
-{
-  "transaction": {
-    "to": "0x2626664c2603336E57B271c5C0b26F421741e481",
-    "value": "0x0",
-    "data": "0x...",
-    "gasLimit": "0x186a0",
-    "gasPrice": "0x4a817c800"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "transaction": {
-    "to": "0x2626664c2603336E57B271c5C0b26F421741e481",
-    "value": "0x0",
-    "data": "0x...",
-    "gasLimit": "0x186a0",
-    "gasPrice": "0x4a817c800"
-  },
-  "signature": "0x...",
-  "hash": "0x..."
-}
-```
-
-### 6. Wallet Integration
-Wallet-specific endpoints for transaction handling.
-
-**Endpoint:** `POST /api/wallet/action`
-
-**Request Body:**
-```json
-{
-  "action": "swap",
-  "fromToken": "ETH",
-  "toToken": "USDC",
-  "amount": "0.001",
-  "nonce": "action_123456789",
-  "chain": "base"
-}
-```
-
-**URL Example for Wallet Page:**
-```
-https://your-deployment-url.vercel.app/wallet?action=swap&fromToken=ETH&toToken=USDC&amount=0.001&chain=base&nonce=test123
-```
-
-## 💱 Supported Tokens by Network
-
-### Ethereum
-- ETH (Native), WETH, USDC, USDT, DAI, WBTC, UNI, AAVE, LINK, MKR
-
-### Polygon
-- MATIC (Native), WMATIC, USDC, USDT, DAI, WETH, WBTC, UNI, AAVE, LINK
-
-### Arbitrum
-- ETH (Native), WETH, USDC, USDT, DAI, WBTC, UNI, AAVE, LINK
-
-### Optimism
-- ETH (Native), WETH, USDC, USDT, DAI, WBTC, UNI, AAVE, LINK
-
-### Base
-- ETH (Native), WETH, USDC, DAI, WBTC, UNI
-
-### BNB Chain
-- BNB (Native), WBNB, USDC, USDT, DAI, ETH, BTCB, UNI, CAKE
-
-### Avalanche
-- AVAX (Native), WAVAX, USDC, USDT, DAI, WETH, WBTC
-
-### Celo
-- CELO (Native), WETH, cUSD, cEUR, USDC, USDT, DAI
-
-## 🔧 Integration Examples
-
-### JavaScript/Node.js
-
-```javascript
-const API_BASE = 'https://your-deployment-url.vercel.app';
-
-// Swap ETH to USDC on Base
-async function swapOnBase() {
-  const response = await fetch(`${API_BASE}/api/mcp/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      fromAddress: '0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c',
-      action: 'swap',
-      fromToken: 'ETH',
-      toToken: 'USDC',
-      amount: '0.001',
-      chain: 'base',
-      slippage: 0.01
-    })
-  });
-
-  const result = await response.json();
-  console.log('Swap initiated:', result);
-}
-
-// Get portfolio
-async function getPortfolio(address) {
-  const response = await fetch(`${API_BASE}/api/mcp/portfolio?address=${address}`);
-  const portfolio = await response.json();
-  console.log('Portfolio:', portfolio);
-}
-
-// Get strategies
-async function getStrategies(address, risk = 'medium') {
-  const response = await fetch(`${API_BASE}/api/mcp/strategy?address=${address}&risk=${risk}`);
-  const strategies = await response.json();
-  console.log('Strategies:', strategies);
-}
-```
-
-### Python
-
-```python
-import requests
-
-API_BASE = 'https://your-deployment-url.vercel.app'
-
-def swap_on_base():
-    payload = {
-        'fromAddress': '0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c',
-        'action': 'swap',
-        'fromToken': 'ETH',
-        'toToken': 'USDC',
-        'amount': '0.001',
-        'chain': 'base',
-        'slippage': 0.01
-    }
-
-    response = requests.post(f'{API_BASE}/api/mcp/action', json=payload)
-    result = response.json()
-    print('Swap initiated:', result)
-
-def get_portfolio(address):
-    response = requests.get(f'{API_BASE}/api/mcp/portfolio?address={address}')
-    portfolio = response.json()
-    print('Portfolio:', portfolio)
-
-def get_strategies(address, risk='medium'):
-    response = requests.get(f'{API_BASE}/api/mcp/strategy?address={address}&risk={risk}')
-    strategies = response.json()
-    print('Strategies:', strategies)
-```
-
-### cURL Examples
+### Manual Deployment
 
 ```bash
-# Swap on Base
-curl -X POST https://your-deployment-url.vercel.app/api/mcp/action \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fromAddress": "0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c",
-    "action": "swap",
-    "fromToken": "ETH",
-    "toToken": "USDC",
-    "amount": "0.001",
-    "chain": "base",
-    "slippage": 0.01
-  }'
+# Build for production
+npm run build
 
-# Get portfolio
-curl "https://your-deployment-url.vercel.app/api/mcp/portfolio?address=0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c"
+# Deploy to Vercel
+npm i -g vercel
+vercel --prod
 
-# Get strategies
-curl "https://your-deployment-url.vercel.app/api/mcp/strategy?address=0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c&risk=medium"
-
-# Transfer tokens
-curl -X POST https://your-deployment-url.vercel.app/api/mcp/transfer \
-  -H "Content-Type: application/json" \
-  -d '{
-    "fromAddress": "0xd3a12CA02256CD74AD8659974cfF36f62Aa0485c",
-    "toAddress": "0x742d35Cc6634C0532925a3b8D8C9C8C8C8C8C8C8",
-    "token": "USDC",
-    "amount": "100.0",
-    "chain": "ethereum"
-  }'
+# Or deploy to Netlify
+npm run build
+npm i -g netlify-cli
+netlify deploy --prod --dir .next
 ```
 
-## 🚨 Error Handling
+### Environment Variables
 
-All API endpoints return standard HTTP status codes and error responses:
+Set these in your deployment platform:
 
-```json
-{
-  "error": "Error message description",
-  "code": "ERROR_CODE",
-  "details": {
-    "field": "additional error details"
-  }
-}
+```env
+AURA_API_KEY=your_api_key
+AURA_API_SECRET=your_api_secret
+NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
-**Common Error Codes:**
-- `400` - Bad Request (invalid parameters)
-- `404` - Not Found (endpoint or resource not found)
-- `500` - Internal Server Error
-- `503` - Service Unavailable (network issues)
+## 🆘 Support & Community
 
-## 🔐 Authentication & Security
+- 📖 **Documentation**: [docs.envexx.dev/mcp-aura](https://docs.envexx.dev/mcp-aura)
+- 💬 **Discord**: [discord.gg/envexx](https://discord.gg/envexx)
+- 🐛 **Issues**: [github.com/envexx/mcp-aura/issues](https://github.com/envexx/mcp-aura/issues)
+- 📧 **Email**: support@envexx.dev
 
-The API operates in a **non-custodial** manner by default. Users maintain full control of their private keys. All transactions require explicit user approval and signing.
+## 📄 License
 
-**Future enhancements may include:**
-- API key authentication for enterprise features
-- Rate limiting and usage quotas
-- Enhanced security monitoring
-
-## 📊 Rate Limits
-
-- **Portfolio queries**: 100 requests/minute per IP
-- **Strategy recommendations**: 50 requests/minute per IP
-- **Transaction operations**: 20 requests/minute per IP
-- **MCP server calls**: 200 requests/minute per IP
-
-## 🔗 Integration Libraries
-
-### Official SDKs (Coming Soon)
-- **JavaScript SDK**: `@envxx/mcp-aura-js`
-- **Python SDK**: `envxx-mcp-aura`
-- **Go SDK**: `github.com/envxx/mcp-aura-go`
-
-### Community Libraries
-- **React Hook**: `react-mcp-aura`
-- **Vue Plugin**: `vue-mcp-aura`
-- **Flutter Package**: `mcp_aura`
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-**1. "Network not supported"**
-- Ensure the `chain` parameter uses supported network names
-- Check spelling: `base` not `Base` or `BASE`
-
-**2. "Token not found"**
-- Verify token symbols are correct (case-sensitive)
-- Check if the token exists on the specified network
-
-**3. "Insufficient balance"**
-- Ensure the wallet has sufficient funds for the operation
-- Include gas fees in balance calculations
-
-**4. "Slippage too high"**
-- Reduce slippage tolerance or wait for better market conditions
-- Consider splitting large transactions
-
-### Support Channels
-- **Documentation**: [docs.envxx.dev/mcp-aura](https://docs.envxx.dev/mcp-aura)
-- **Discord**: [discord.gg/envxx](https://discord.gg/envxx)
-- **GitHub Issues**: [github.com/envxx/mcp-aura/issues](https://github.com/envxx/mcp-aura/issues)
-- **Email**: api-support@envxx.dev
-
-## 📈 Performance & Reliability
-
-- **99.9% uptime SLA**
-- **<100ms average response time** for queries
-- **Real-time price feeds** from multiple DEXes
-- **Automatic failover** to backup RPC endpoints
-- **Comprehensive monitoring** and alerting
-
-## 🎯 Use Cases
-
-### DeFi Portfolio Management
-```javascript
-// Automated portfolio rebalancing
-async function rebalancePortfolio(address) {
-  const portfolio = await getPortfolio(address);
-  const strategies = await getStrategies(address, 'medium');
-
-  for (const strategy of strategies) {
-    if (strategy.apy > 10) {
-      await executeStrategy(address, strategy);
-    }
-  }
-}
-```
-
-### Yield Farming Automation
-```javascript
-// Find and execute best yield opportunities
-async function findBestYields(address) {
-  const strategies = await getStrategies(address, 'high');
-  const bestStrategy = strategies.sort((a, b) => b.apy - a.apy)[0];
-
-  if (bestStrategy.apy > 15) {
-    await executeAction({
-      action: 'stake',
-      fromToken: bestStrategy.fromToken,
-      amount: '1000',
-      chain: bestStrategy.chain
-    });
-  }
-}
-```
-
-### Cross-Chain Arbitrage
-```javascript
-// Monitor and execute arbitrage opportunities
-async function checkArbitrage(token) {
-  const networks = ['ethereum', 'arbitrum', 'polygon', 'base'];
-
-  for (const network of networks) {
-    const price = await getTokenPrice(token, network);
-    // Implement arbitrage logic
-  }
-}
-```
+**ENVEXX MCP AURA** is built by ENVEXX for the decentralized future.
 
 ---
 
-**Ready to integrate ENVXX MCP AURA into your project?** Check out our [Integration Guide](https://docs.envxx.dev/mcp-aura/integration) for step-by-step instructions!
-
-## Deployment
-
-This **ENVXX MCP AURA** project is designed to work with various hosting platforms. The `baseUrl.ts` configuration automatically detects environment variables and sets the correct asset URLs for your deployment.
-
-**Deploy to your preferred platform:**
-- Vercel, Netlify, Railway, or any Node.js hosting service
-- Ensure environment variables are properly configured
-- The MCP server will be available at `https://your-domain.com/mcp`
-
-The configuration automatically handles:
-- Production URLs via environment variables
-- Preview/branch URLs for testing
-- Asset prefixing for correct resource loading in iframes
+<div align="center">
+  <p><strong>Built with ❤️ by ENVEXX Team</strong></p>
+  <p>
+    <a href="https://envexx.dev">Website</a> •
+    <a href="https://twitter.com/envexx">Twitter</a> •
+    <a href="https://github.com/envexx">GitHub</a>
+  </p>
+</div>

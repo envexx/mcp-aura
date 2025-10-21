@@ -2,6 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { MessageSquare } from "lucide-react";
+import { useAccount } from "wagmi";
 import {
   useWidgetProps,
   useMaxHeight,
@@ -11,6 +15,8 @@ import {
 } from "./hooks";
 
 export default function Home() {
+  const router = useRouter();
+  const { isConnected } = useAccount();
   const toolOutput = useWidgetProps<{
     name?: string;
     result?: { structuredContent?: { name?: string } };
@@ -21,6 +27,12 @@ export default function Home() {
   const isChatGptApp = useIsChatGptApp();
 
   const name = toolOutput?.result?.structuredContent?.name || toolOutput?.name;
+
+  useEffect(() => {
+    if (isConnected) {
+      router.push('/chatbot');
+    }
+  }, [isConnected, router]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -319,6 +331,13 @@ export default function Home() {
             Connect your wallet and let AURA AI guide your DeFi journey
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/chatbot"
+              className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold flex items-center justify-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Try Chatbot
+            </Link>
             <Link
               href="/portfolio"
               className="px-8 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-semibold flex items-center justify-center gap-2"
