@@ -142,24 +142,59 @@ export default function ChatbotPage() {
     p: ({ children }: any) => {
       const textContent = children?.toString() || '';
 
-      // Check if paragraph contains wallet connection URL text
-      if (textContent.toLowerCase().includes('wallet connection url') && !isConnected) {
-        // Split the text and make the URL part look like a clickable link
-        const parts = textContent.split(/(wallet connection URL)/i);
-        return (
-          <p className="text-gray-900 leading-relaxed">
-            {parts[0]}
-            <button
-              onClick={() => handleActionClick('connect_wallet', {})}
-              className="inline-flex items-center gap-2 px-3 py-1 mx-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium text-sm underline decoration-2 decoration-blue-300 hover:decoration-blue-400"
-            >
-              <Wallet className="w-3 h-3" />
-              wallet connection URL
-              <ExternalLink className="w-3 h-3" />
-            </button>
-            {parts[2] || ''}
-          </p>
-        );
+      // Check if paragraph contains wallet connection related text
+      const walletConnectionPatterns = [
+        /wallet connection url/i,
+        /connect your wallet/i,
+        /sign the transaction here/i,
+        /sign.*here/i,
+        /connect.*here/i,
+        /\bhere\b.*sign/i,
+        /\bhere\b.*connect/i
+      ];
+
+      const hasWalletConnection = walletConnectionPatterns.some(pattern => pattern.test(textContent));
+
+      if (hasWalletConnection && !isConnected) {
+        // Split and highlight the actionable part
+        let processedText = textContent;
+        let actionText = '';
+
+        if (textContent.toLowerCase().includes('wallet connection url')) {
+          const parts = textContent.split(/(wallet connection URL)/i);
+          return (
+            <p className="text-gray-900 leading-relaxed">
+              {parts[0]}
+              <button
+                onClick={() => handleActionClick('connect_wallet', {})}
+                className="inline-flex items-center gap-2 px-3 py-1 mx-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium text-sm underline decoration-2 decoration-blue-300 hover:decoration-blue-400"
+              >
+                <Wallet className="w-3 h-3" />
+                wallet connection URL
+                <ExternalLink className="w-3 h-3" />
+              </button>
+              {parts[2] || ''}
+            </p>
+          );
+        } else if (textContent.toLowerCase().includes('sign the transaction here') ||
+                   textContent.toLowerCase().includes('connect your wallet')) {
+          // Handle "sign the transaction here" or "connect your wallet" patterns
+          const parts = textContent.split(/(sign the transaction here|connect your wallet)/i);
+          return (
+            <p className="text-gray-900 leading-relaxed">
+              {parts[0]}
+              <button
+                onClick={() => handleActionClick('connect_wallet', {})}
+                className="inline-flex items-center gap-2 px-3 py-1 mx-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium text-sm underline decoration-2 decoration-blue-300 hover:decoration-blue-400"
+              >
+                <Wallet className="w-3 h-3" />
+                {parts[1]}
+                <ExternalLink className="w-3 h-3" />
+              </button>
+              {parts[2] || ''}
+            </p>
+          );
+        }
       }
 
       // Check if paragraph contains any URL patterns
