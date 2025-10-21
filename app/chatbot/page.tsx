@@ -140,25 +140,55 @@ export default function ChatbotPage() {
 
   const customComponents = {
     p: ({ children }: any) => {
-      // Check if paragraph contains wallet connection URL text
       const textContent = children?.toString() || '';
+
+      // Check if paragraph contains wallet connection URL text
       if (textContent.toLowerCase().includes('wallet connection url') && !isConnected) {
-        // Split the text and make the URL part look like a button
+        // Split the text and make the URL part look like a clickable link
         const parts = textContent.split(/(wallet connection URL)/i);
         return (
           <p className="text-gray-900 leading-relaxed">
             {parts[0]}
-            <span
+            <button
               onClick={() => handleActionClick('connect_wallet', {})}
-              className="inline-flex items-center gap-2 px-4 py-2 mx-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium cursor-pointer"
+              className="inline-flex items-center gap-2 px-3 py-1 mx-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors font-medium text-sm underline decoration-2 decoration-blue-300 hover:decoration-blue-400"
             >
-              <Wallet className="w-4 h-4" />
+              <Wallet className="w-3 h-3" />
               wallet connection URL
-            </span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
             {parts[2] || ''}
           </p>
         );
       }
+
+      // Check if paragraph contains any URL patterns
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      if (urlRegex.test(textContent)) {
+        const parts = textContent.split(urlRegex);
+        return (
+          <p className="text-gray-900 leading-relaxed">
+            {parts.map((part: string, index: number) => {
+              if (urlRegex.test(part)) {
+                return (
+                  <a
+                    key={index}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-1 mx-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-medium text-sm underline decoration-blue-400 hover:decoration-blue-600"
+                  >
+                    {part}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                );
+              }
+              return part;
+            })}
+          </p>
+        );
+      }
+
       return <p className="text-gray-900 leading-relaxed">{children}</p>;
     },
     strong: ({ children }: any) => {
@@ -169,6 +199,19 @@ export default function ChatbotPage() {
     },
     li: ({ children }: any) => {
       return <li className="text-gray-900">{children}</li>;
+    },
+    a: ({ href, children }: any) => {
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors font-medium text-sm underline decoration-blue-400 hover:decoration-blue-600"
+        >
+          {children}
+          <ExternalLink className="w-3 h-3" />
+        </a>
+      );
     },
   };
 
