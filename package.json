@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start"
   },
   "dependencies": {
@@ -52,7 +52,7 @@
     "tailwind-merge": "^2.5.5",
     "viem": "^2.21.45",
     "wagmi": "^2.12.29",
-    "zod": "^3.25.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
