@@ -53,23 +53,30 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Add additional metadata for each strategy
-    const enrichedStrategies = {
-      ...filteredStrategies,
-      strategies: filteredStrategies.strategies.map(strategy => ({
-        ...strategy,
-        response: strategy.response.map(s => ({
-          ...s,
-          actions: s.actions.map(action => ({
-            ...action,
-            id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            executable: true,
-            estimatedTime: '2-5 minutes',
-            complexity: action.operations.length > 1 ? 'complex' : 'simple'
-          }))
-        }))
-      }))
-    };
+    // Validate and enrich strategy data
+    let enrichedStrategies;
+    try {
+      enrichedStrategies = {
+        ...filteredStrategies,
+        strategies: filteredStrategies.strategies?.map(strategy => ({
+          ...strategy,
+          response: strategy.response?.map(s => ({
+            ...s,
+            actions: (s.actions || []).map(action => ({
+              ...action,
+              id: `action_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              executable: true,
+              estimatedTime: '2-5 minutes',
+              complexity: (action.operations && action.operations.length > 1) ? 'complex' : 'simple'
+            }))
+          })) || []
+        })) || []
+      };
+    } catch (enrichError) {
+      console.error('Error enriching strategy data:', enrichError);
+      // Return basic structure if enrichment fails
+      enrichedStrategies = filteredStrategies;
+    }
 
     const response = NextResponse.json({
       success: true,
@@ -82,9 +89,9 @@ export async function GET(request: NextRequest) {
       meta: {
         source: 'AURA AdEx API',
         version: '1.0.0',
-        totalStrategies: enrichedStrategies.strategies.reduce(
-          (acc, s) => acc + s.response.length, 0
-        )
+        totalStrategies: enrichedStrategies.strategies?.reduce(
+          (acc, s) => acc + (s.response?.length || 0), 0
+        ) || 0
       }
     });
 

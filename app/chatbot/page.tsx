@@ -32,10 +32,36 @@ export default function ChatbotPage() {
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'chat' | 'protocol' | 'portfolio' | 'strategy'>('chat');
+  const [strategies, setStrategies] = useState<any>(null);
+  const [loadingStrategies, setLoadingStrategies] = useState(false);
+  const [strategyFilters, setStrategyFilters] = useState({
+    riskLevel: 'medium',
+    timeframe: 'medium'
+  });
 
   const clearChatHistory = () => {
     setChatHistory([]);
     localStorage.removeItem('mcp-aura-chat-history');
+  };
+
+  const fetchStrategies = async () => {
+    if (!address) return;
+
+    setLoadingStrategies(true);
+    try {
+      const response = await fetch(`/api/mcp/strategy?address=${address}&risk=${strategyFilters.riskLevel}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setStrategies(data.data);
+      } else {
+        console.error('Failed to fetch strategies:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching strategies:', error);
+    } finally {
+      setLoadingStrategies(false);
+    }
   };
 
   useEffect(() => {
@@ -44,6 +70,12 @@ export default function ChatbotPage() {
       latestMessage?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatHistory]);
+
+  useEffect(() => {
+    if (activeTab === 'strategy' && isConnected && address && !strategies) {
+      fetchStrategies();
+    }
+  }, [activeTab, isConnected, address, strategyFilters.riskLevel]);
 
   const fetchPortfolio = async () => {
     if (!address) return;
@@ -689,7 +721,11 @@ export default function ChatbotPage() {
                       <div className="grid md:grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">Risk Level</label>
-                          <select className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white">
+                          <select
+                            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                            value={strategyFilters.riskLevel}
+                            onChange={(e) => setStrategyFilters(prev => ({ ...prev, riskLevel: e.target.value }))}
+                          >
                             <option value="low">Low Risk</option>
                             <option value="medium">Medium Risk</option>
                             <option value="high">High Risk</option>
@@ -697,15 +733,23 @@ export default function ChatbotPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-300 mb-2">Time Horizon</label>
-                          <select className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white">
+                          <select
+                            className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white"
+                            value={strategyFilters.timeframe}
+                            onChange={(e) => setStrategyFilters(prev => ({ ...prev, timeframe: e.target.value }))}
+                          >
                             <option value="short">Short Term (1-3 months)</option>
                             <option value="medium">Medium Term (3-6 months)</option>
                             <option value="long">Long Term (6+ months)</option>
                           </select>
                         </div>
                         <div className="flex items-end">
-                          <button className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
-                            Generate Strategies
+                          <button
+                            onClick={fetchStrategies}
+                            disabled={loadingStrategies}
+                            className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition"
+                          >
+                            {loadingStrategies ? 'Loading...' : 'Generate Strategies'}
                           </button>
                         </div>
                       </div>
@@ -715,83 +759,129 @@ export default function ChatbotPage() {
                     <div className="space-y-4">
                       <h3 className="text-xl font-semibold text-white">Recommended Strategies</h3>
 
-                      <div className="bg-gray-900 rounded-xl p-6 border border-gray-700">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg font-semibold text-white mb-1">ETH-USDC Yield Farming</h4>
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                                Aave Protocol
-                              </span>
-                              <span>Risk: Medium</span>
-                              <span>APY: 8.5%</span>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-green-400">$1,200 TVL</div>
-                            <div className="text-sm text-gray-400">Total Value Locked</div>
-                          </div>
+                      {loadingStrategies ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                          <p className="text-gray-400 mt-4">Analyzing your portfolio and generating strategies...</p>
                         </div>
-                        <p className="text-gray-300 mb-4">
-                          Provide liquidity to the ETH-USDC pool on Aave to earn stable yield through lending fees and protocol rewards.
-                        </p>
-                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
-                          View Details
-                        </button>
-                      </div>
+                      ) : strategies && strategies.strategies ? (
+                        strategies.strategies.flatMap((strategyGroup: any) =>
+                          (strategyGroup.response || []).map((strategy: any, index: number) => (
+                            <div key={`${strategyGroup.strategy || 'strategy'}-${index}`} className="bg-gray-900 rounded-xl p-6 border border-gray-700">
+                              <div className="flex items-start justify-between mb-4">
+                                <div>
+                                  <h4 className="text-lg font-semibold text-white mb-1">{strategy.name || strategy.title || 'Strategy Recommendation'}</h4>
+                                  <div className="flex items-center gap-4 text-sm text-gray-400">
+                                    <span className="flex items-center gap-1">
+                                      <span className={`w-2 h-2 rounded-full ${
+                                        strategy.risk === 'low' ? 'bg-green-400' :
+                                        strategy.risk === 'medium' ? 'bg-yellow-400' : 'bg-red-400'
+                                      }`}></span>
+                                      {strategy.protocol || strategy.platform || 'Multiple Protocols'}
+                                    </span>
+                                    <span>Risk: {strategy.risk || 'Medium'}</span>
+                                    <span>APY: {strategy.apy ? `${strategy.apy}%` : strategy.expectedReturn ? `${strategy.expectedReturn}%` : 'Variable'}</span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-2xl font-bold text-green-400">
+                                    {strategy.tvl ? `$${strategy.tvl.toLocaleString()}` :
+                                     strategy.poolSize ? `$${strategy.poolSize.toLocaleString()}` : 'Variable'}
+                                  </div>
+                                  <div className="text-sm text-gray-400">TVL</div>
+                                </div>
+                              </div>
+                              <p className="text-gray-300 mb-4">
+                                {strategy.description || strategy.explanation || 'AI-powered strategy recommendation based on current market conditions.'}
+                              </p>
+                              <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
+                                View Details
+                              </button>
+                            </div>
+                          ))
+                        )
+                      ) : (
+                        <>
+                          {/* Default mockup data when no API data available */}
+                          <div className="bg-gray-900 rounded-xl p-6 border border-gray-700">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h4 className="text-lg font-semibold text-white mb-1">ETH-USDC Yield Farming</h4>
+                                <div className="flex items-center gap-4 text-sm text-gray-400">
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                    Aave Protocol
+                                  </span>
+                                  <span>Risk: Medium</span>
+                                  <span>APY: 8.5%</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-green-400">$1,200</div>
+                                <div className="text-sm text-gray-400">TVL</div>
+                              </div>
+                            </div>
+                            <p className="text-gray-300 mb-4">
+                              Provide liquidity to the ETH-USDC pool on Aave to earn stable yield through lending fees and protocol rewards.
+                            </p>
+                            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
+                              View Details
+                            </button>
+                          </div>
 
-                      <div className="bg-gray-900 rounded-xl p-6 border border-gray-700">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg font-semibold text-white mb-1">Cross-Chain Arbitrage</h4>
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
-                                Multi-Chain
-                              </span>
-                              <span>Risk: High</span>
-                              <span>Potential: 2-5%</span>
+                          <div className="bg-gray-900 rounded-xl p-6 border border-gray-700">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h4 className="text-lg font-semibold text-white mb-1">Cross-Chain Arbitrage</h4>
+                                <div className="flex items-center gap-4 text-sm text-gray-400">
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-blue-400 rounded-full"></span>
+                                    Multi-Chain
+                                  </span>
+                                  <span>Risk: High</span>
+                                  <span>Potential: 2-5%</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-blue-400">Variable</div>
+                                <div className="text-sm text-gray-400">Returns</div>
+                              </div>
                             </div>
+                            <p className="text-gray-300 mb-4">
+                              Exploit price differences across different DEXes and blockchains to capture arbitrage opportunities.
+                            </p>
+                            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
+                              View Details
+                            </button>
                           </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-blue-400">Variable</div>
-                            <div className="text-sm text-gray-400">Returns</div>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 mb-4">
-                          Exploit price differences across different DEXes and blockchains to capture arbitrage opportunities.
-                        </p>
-                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
-                          View Details
-                        </button>
-                      </div>
 
-                      <div className="bg-gray-900 rounded-xl p-6 border border-gray-700">
-                        <div className="flex items-start justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg font-semibold text-white mb-1">Stablecoin Stacking</h4>
-                            <div className="flex items-center gap-4 text-sm text-gray-400">
-                              <span className="flex items-center gap-1">
-                                <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-                                Compound
-                              </span>
-                              <span>Risk: Low</span>
-                              <span>APY: 4.2%</span>
+                          <div className="bg-gray-900 rounded-xl p-6 border border-gray-700">
+                            <div className="flex items-start justify-between mb-4">
+                              <div>
+                                <h4 className="text-lg font-semibold text-white mb-1">Stablecoin Stacking</h4>
+                                <div className="flex items-center gap-4 text-sm text-gray-400">
+                                  <span className="flex items-center gap-1">
+                                    <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                                    Compound
+                                  </span>
+                                  <span>Risk: Low</span>
+                                  <span>APY: 4.2%</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-2xl font-bold text-green-400">$500K</div>
+                                <div className="text-sm text-gray-400">TVL</div>
+                              </div>
                             </div>
+                            <p className="text-gray-300 mb-4">
+                              Deposit stablecoins into Compound's lending protocol to earn interest from borrowers.
+                            </p>
+                            <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
+                              View Details
+                            </button>
                           </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-green-400">$500K TVL</div>
-                            <div className="text-sm text-gray-400">Total Value Locked</div>
-                          </div>
-                        </div>
-                        <p className="text-gray-300 mb-4">
-                          Deposit stablecoins into Compound's lending protocol to earn interest from borrowers.
-                        </p>
-                        <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition">
-                          View Details
-                        </button>
-                      </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
