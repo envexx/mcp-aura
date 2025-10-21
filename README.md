@@ -293,7 +293,7 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 
 ## 📄 License
 
-**ENVEXX MCP AURA** is built by ENVEXX for the decentralized future.
+**ENVEXX MCP AURA** is built by ENVEXX for the decentralized future
 
 ---
 
